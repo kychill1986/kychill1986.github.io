@@ -3,7 +3,7 @@
     <meta charset="utf-8"/>
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Hello Gridea | KYChill</title>
+<title>Mac 系统安装ElasticSearch | KYChill</title>
 <link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1583909595175">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://kychill1986.github.io/styles/main.css">
@@ -87,45 +87,104 @@
         <div class="post-detail gt-bg-theme-color-second">
             <article class="gt-post-content">
                 <h2 class="post-title">
-                    Hello Gridea
+                    Mac 系统安装ElasticSearch
                 </h2>
                 <div class="post-info">
                     <time class="post-time gt-c-content-color-first">
-                        · 2018-12-12 ·
+                        · 2020-03-11 ·
                     </time>
                     
-                        <a href="https://kychill1986.github.io/tag/EQWk7DtgJ/" class="post-tags">
-                            # Gridea
+                        <a href="https://kychill1986.github.io/tag/OAUKSjWmm/" class="post-tags">
+                            # ElasticSearch
                         </a>
                     
                 </div>
                 <div class="post-content">
-                    <p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-<!-- more -->
-<p><a href="https://github.com/getgridea/gridea">Github</a><br>
-<a href="https://gridea.dev/">Gridea 主页</a><br>
-<a href="http://fehey.com/">示例网站</a></p>
-<h2 id="特性">特性👇</h2>
-<p>📝  你可以使用最酷的 <strong>Markdown</strong> 语法，进行快速创作</p>
-<p>🌉  你可以给文章配上精美的封面图和在文章任意位置插入图片</p>
-<p>🏷️  你可以对文章进行标签分组</p>
-<p>📋  你可以自定义菜单，甚至可以创建外部链接菜单</p>
-<p>💻  你可以在 <strong>Windows</strong>，<strong>MacOS</strong> 或 <strong>Linux</strong> 设备上使用此客户端</p>
-<p>🌎  你可以使用 <strong>𝖦𝗂𝗍𝗁𝗎𝖻 𝖯𝖺𝗀𝖾𝗌</strong> 或 <strong>Coding Pages</strong> 向世界展示，未来将支持更多平台</p>
-<p>💬  你可以进行简单的配置，接入 <a href="https://github.com/gitalk/gitalk">Gitalk</a> 或 <a href="https://github.com/SukkaW/DisqusJS">DisqusJS</a> 评论系统</p>
-<p>🇬🇧  你可以使用<strong>中文简体</strong>或<strong>英语</strong></p>
-<p>🌁  你可以任意使用应用内默认主题或任意第三方主题，强大的主题自定义能力</p>
-<p>🖥  你可以自定义源文件夹，利用 OneDrive、百度网盘、iCloud、Dropbox 等进行多设备同步</p>
-<p>🌱 当然 <strong>Gridea</strong> 还很年轻，有很多不足，但请相信，它会不停向前 🏃</p>
-<p>未来，它一定会成为你离不开的伙伴</p>
-<p>尽情发挥你的才华吧！</p>
-<p>😘 Enjoy~</p>
+                    <h2 id="单机安装">单机安装</h2>
+<ol>
+<li>下载elasticSearch http://elastic.co</li>
+<li>解压elasticSearch...tar.gz</li>
+<li>启动elasticSearch<br>
+<code>./bin/elasticsearch -d #后台运行</code></li>
+</ol>
+<h2 id="安装elasticsearch-head插件">安装elasticSearch-head插件</h2>
+<ol>
+<li>下载elasticSearch-head，访问gitHub，搜索elasticSearch-head，在搜索结果里点击“mobz/elasticsearch-head”</li>
+<li>解压elasticSearch-head</li>
+<li>cd '/Users/xxx/Documents/Tools/ElasticSearch/elasticsearch-head-master/'</li>
+<li>安装最新版node <code>brew install node</code></li>
+<li>安装grunt <code>npm install -g grunt-cli</code></li>
+<li>在elasticsearch-head-master目录执行 npm install</li>
+</ol>
+<pre><code>如果安装过程中出现：
+1. Failed at the phantomjs-prebuilt@2.1.15 install script ‘node install.js’.
+解决方法：
+npm install phantomjs-prebuilt@2.1.15 --ignore-scripts
+2. Local Npm module &quot;grunt-contrib-jasmine&quot; not found. Is it installed
+解决办法：
+npm install grunt-contrib-jasmine --registry=https://registry.npm.taobao.org #使用国内镜像
+</code></pre>
+<ol start="7">
+<li>启动elasticSearch-head</li>
+</ol>
+<pre><code>npm run start
+</code></pre>
+<ol start="8">
+<li>测试：http://serverip:9100/</li>
+</ol>
+<h2 id="配置elasticsearch">配置elasticsearch</h2>
+<p>使elasticSearch-head能正常访问（这两个是独立的进程，有跨域问题），修改elasticsearch，config/elasticsearch.yml文件，加入如下代码：</p>
+<pre><code class="language-yml">http.cors.enabled: true
+http.cors.allow-origin: &quot;*&quot;
+</code></pre>
+<p>重新启动elasticsearch，访问elasticSearch-head，http://serverip:9100/</p>
+<h2 id="elasticsearch集群配置">ElasticSearch集群配置</h2>
+<h3 id="修改configelasticsearchyml文件">修改config/elasticsearch.yml文件</h3>
+<p>master:</p>
+<pre><code class="language-yml">http.cors.enabled: true
+http.cors.allow-origin: &quot;*&quot;
+
+cluster.name: chillcluster
+node.name: chillmaster
+node.master: true
+</code></pre>
+<p>slave1:</p>
+<pre><code class="language-yml">cluster.name: chillcluster
+node.name: slave1
+
+network.host: 127.0.0.1
+http.port: 9201
+
+discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;] #找到master，如果不做这个配置那么这个节点就是游离于集群之外的
+
+</code></pre>
+<p>slave2:</p>
+<pre><code class="language-yml">cluster.name: chillcluster
+node.name: slave2
+
+network.host: 127.0.0.1
+
+http.port: 9202
+
+discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;] #找到master，如果不做这个配置那么这个节点就是游离于集群之外的
+</code></pre>
+<h2 id="reference">Reference</h2>
+<blockquote>
+<p>https://blog.csdn.net/fenglailea/article/details/52934263<br>
+http://www.bubuko.com/infodetail-2108888.html</p>
+</blockquote>
 
                 </div>
             </article>
         </div>
 
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://kychill1986.github.io/post/hello-gridea/" class="post-title gt-a-link">
+                    Hello Gridea
+                </a>
+            </div>
         
 
         
