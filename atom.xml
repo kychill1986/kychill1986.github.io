@@ -2,11 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://kychill1986.github.io</id>
     <title>KYChill</title>
-    <updated>2020-03-11T06:22:55.590Z</updated>
+    <updated>2020-03-11T06:40:06.441Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://kychill1986.github.io"/>
     <link rel="self" href="https://kychill1986.github.io/atom.xml"/>
-    <subtitle>温故而知新</subtitle>
     <logo>https://kychill1986.github.io/images/avatar.png</logo>
     <icon>https://kychill1986.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, KYChill</rights>
