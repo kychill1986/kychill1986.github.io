@@ -4,7 +4,7 @@
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Mac 系统安装ElasticSearch | KYChill</title>
-<link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1590651438108">
+<link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1590658989263">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://kychill1986.github.io/styles/main.css">
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
@@ -169,6 +169,23 @@ network.host: 127.0.0.1
 http.port: 9202
 
 discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;] #找到master，如果不做这个配置那么这个节点就是游离于集群之外的
+</code></pre>
+<hr>
+<!-- more -->
+<p>#彩蛋🎆<br>
+官方下载下来的elasticsearch安装包，直接解压，运行以前命令，也可以实现同样的集群效果</p>
+<pre><code class="language-shell">复杂的：
+./elasticsearch -E node.name=chillmaster -E cluster.name=chillcluster -E node.master=true -E http.cors.enabled=true -E http.cors.allow-origin=&quot;*&quot; -E path.data=node1_data -d
+./elasticsearch -E node.name=slave1 -E cluster.name=chillcluster -E network.host=127.0.0.1 -E http.port=9201 -E discovery.zen.ping.unicast.hosts=&quot;127.0.0.1&quot; -E path.data=node2_data -d
+./elasticsearch -E node.name=slave2 -E cluster.name=chillcluster -E network.host=127.0.0.1 -E http.port=9202 -E discovery.zen.ping.unicast.hosts=&quot;127.0.0.1&quot; -E path.data=node3_data -d
+
+
+简单的：
+./elasticsearch -E node.name=node1 -E cluster.name=chillcluster -E path.data=node1_data -d
+./elasticsearch -E node.name=node2 -E cluster.name=chillcluster -E path.data=node2_data -d
+./elasticsearch -E node.name=node3 -E cluster.name=chillcluster -E path.data=node3_data -d
+
+最后用http://127.0.0.1:9200/_cat/nodes，检查下是否正常
 </code></pre>
 <h2 id="reference">Reference</h2>
 <blockquote>
