@@ -4,7 +4,7 @@
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS) | KYChill</title>
-<link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1590651066846">
+<link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1590651225983">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://kychill1986.github.io/styles/main.css">
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
@@ -96,41 +96,39 @@
                     
                 </div>
                 <div class="post-content">
-                    <h1 id="虚拟机内的elasticsearch-760可以在宿主机用ip进行访问centos">虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)</h1>
-<br />
-##1.关闭防火墙，或者加例外
-###a. 查看firewall服务状态
-`systemctl status firewalld`
-###b. 查看firewall的状态 
-`firewall-cmd --state`
-###d. 开启、重启、关闭、firewalld.service服务
-```shell
-# 开启
+                    <h2 id="1关闭防火墙或者加例外">1.关闭防火墙，或者加例外</h2>
+<h3 id="a-查看firewall服务状态">a. 查看firewall服务状态</h3>
+<p><code>systemctl status firewalld</code></p>
+<h3 id="b-查看firewall的状态">b. 查看firewall的状态</h3>
+<p><code>firewall-cmd --state</code></p>
+<h3 id="d-开启-重启-关闭-firewalldservice服务">d. 开启、重启、关闭、firewalld.service服务</h3>
+<pre><code class="language-shell"># 开启
 service firewalld start
 # 重启
 service firewalld restart
 # 关闭
 service firewalld stop
-```
-###e. 查看防火墙规则
-`firewall-cmd --list-all `
-###f. 查询、开放、关闭端口
-```shell
-# 查询端口是否开放
+</code></pre>
+<h3 id="e-查看防火墙规则">e. 查看防火墙规则</h3>
+<p><code>firewall-cmd --list-all</code></p>
+<h3 id="f-查询-开放-关闭端口">f. 查询、开放、关闭端口</h3>
+<pre><code class="language-shell"># 查询端口是否开放
 firewall-cmd --query-port=8080/tcp
 # 开放80端口
 firewall-cmd --permanent --add-port=80/tcp
 # 移除端口
 firewall-cmd --permanent --remove-port=8080/tcp
-<p>#重启防火墙(修改配置后要重启防火墙)<br>
-firewall-cmd --reload</p>
-<h1 id="参数解释">参数解释</h1>
-<p>1、firwall-cmd：是Linux提供的操作firewall的一个工具；<br>
-2、--permanent：表示设置为持久；<br>
-3、--add-port：标识添加的端口；</p>
-<pre><code>##2. 修改elasticsearch.yml
-``` shell
-    network.host: 192.168.33.134 #可以直接写部署ES的IP
+
+#重启防火墙(修改配置后要重启防火墙)
+firewall-cmd --reload
+
+# 参数解释
+1、firwall-cmd：是Linux提供的操作firewall的一个工具；
+2、--permanent：表示设置为持久；
+3、--add-port：标识添加的端口；
+</code></pre>
+<h2 id="2-修改elasticsearchyml">2. 修改elasticsearch.yml</h2>
+<pre><code class="language-shell">    network.host: 192.168.33.134 #可以直接写部署ES的IP
     http.port: 9200
     
     node.name: node-1
@@ -138,7 +136,7 @@ firewall-cmd --reload</p>
     bootstrap.system_call_filter: false
     cluster.initial_master_nodes: [&quot;node-1&quot;] #这个“node-1”其实就是上面的“node.name”配置项
 </code></pre>
-<p>##3. 修改linux系统配置</p>
+<h2 id="3-修改linux系统配置">3. 修改linux系统配置</h2>
 <h3 id="修改sysctlconf">修改sysctl.conf</h3>
 <pre><code class="language-shell">sudo vim /etc/sysctl.conf
 vm.max_map_count=262144
@@ -147,7 +145,7 @@ vm.max_map_count=262144
 sysctl -a | grep “vm.max_map_count”
 显示vm.max_map_count = 262144
 </code></pre>
-<p>###编辑/etc/security/limits.conf</p>
+<h3 id="编辑etcsecuritylimitsconf">编辑/etc/security/limits.conf</h3>
 <pre><code class="language-shell">* soft nofile 65536
 * hard nofile 65536
 * soft nproc 4096
