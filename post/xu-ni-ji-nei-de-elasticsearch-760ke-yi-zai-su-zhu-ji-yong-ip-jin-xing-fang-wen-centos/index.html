@@ -3,7 +3,7 @@
     <meta charset="utf-8"/>
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>关于 | KYChill</title>
+<title>虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS) | KYChill</title>
 <link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1590651066846">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://kychill1986.github.io/styles/main.css">
@@ -87,27 +87,98 @@
         <div class="post-detail gt-bg-theme-color-second">
             <article class="gt-post-content">
                 <h2 class="post-title">
-                    关于
+                    虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)
                 </h2>
                 <div class="post-info">
                     <time class="post-time gt-c-content-color-first">
-                        · 2019-01-25 ·
+                        · 2020-05-28 ·
                     </time>
                     
                 </div>
                 <div class="post-content">
-                    <blockquote>
-<p>欢迎来到我的小站呀，很高兴遇见你！🤝</p>
-</blockquote>
-<h2 id="关于本站">🏠 关于本站</h2>
-<h2 id="博主是谁">👨‍💻 博主是谁</h2>
-<h2 id="兴趣爱好">⛹ 兴趣爱好</h2>
-<h2 id="联系我呀">📬 联系我呀</h2>
+                    <h1 id="虚拟机内的elasticsearch-760可以在宿主机用ip进行访问centos">虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)</h1>
+<br />
+##1.关闭防火墙，或者加例外
+###a. 查看firewall服务状态
+`systemctl status firewalld`
+###b. 查看firewall的状态 
+`firewall-cmd --state`
+###d. 开启、重启、关闭、firewalld.service服务
+```shell
+# 开启
+service firewalld start
+# 重启
+service firewalld restart
+# 关闭
+service firewalld stop
+```
+###e. 查看防火墙规则
+`firewall-cmd --list-all `
+###f. 查询、开放、关闭端口
+```shell
+# 查询端口是否开放
+firewall-cmd --query-port=8080/tcp
+# 开放80端口
+firewall-cmd --permanent --add-port=80/tcp
+# 移除端口
+firewall-cmd --permanent --remove-port=8080/tcp
+<p>#重启防火墙(修改配置后要重启防火墙)<br>
+firewall-cmd --reload</p>
+<h1 id="参数解释">参数解释</h1>
+<p>1、firwall-cmd：是Linux提供的操作firewall的一个工具；<br>
+2、--permanent：表示设置为持久；<br>
+3、--add-port：标识添加的端口；</p>
+<pre><code>##2. 修改elasticsearch.yml
+``` shell
+    network.host: 192.168.33.134 #可以直接写部署ES的IP
+    http.port: 9200
+    
+    node.name: node-1
+    bootstrap.memory_lock: false
+    bootstrap.system_call_filter: false
+    cluster.initial_master_nodes: [&quot;node-1&quot;] #这个“node-1”其实就是上面的“node.name”配置项
+</code></pre>
+<p>##3. 修改linux系统配置</p>
+<h3 id="修改sysctlconf">修改sysctl.conf</h3>
+<pre><code class="language-shell">sudo vim /etc/sysctl.conf
+vm.max_map_count=262144
+
+检查配置是否生效
+sysctl -a | grep “vm.max_map_count”
+显示vm.max_map_count = 262144
+</code></pre>
+<p>###编辑/etc/security/limits.conf</p>
+<pre><code class="language-shell">* soft nofile 65536
+* hard nofile 65536
+* soft nproc 4096
+* hard nproc 4096
+#以上的配置是针对root用户的
+
+chill soft nofile 65536
+chill hard nofile 65536
+#以上的配置是针对chill用户的
+</code></pre>
+<p>这样在宿主机输入http://192.168.89.128:9200/，就可以看到es正常启动了</p>
+<pre><code>启动时查看elasticsearch.log日志，如果会看到如下的错误提示，那么按照上面的elasticsearch.yml，就可以解决，如果解决不了，可以针对问题直接baidu
+
+[3] bootstrap checks failed
+[1]: max file descriptors [4096] for elasticsearch process is too low, increase to at least [65535]
+[2]: max number of threads [3790] for user [chill] is too low, increase to at least [4096]
+[3]: the default discovery settings are unsuitable for production use; at least one of [discovery.seed_hosts, discovery.seed_providers, clus
+ter.initial_master_nodes] must be configured
+</code></pre>
 
                 </div>
             </article>
         </div>
 
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://kychill1986.github.io/post/mac-xi-tong-an-zhuang-elasticsearch/" class="post-title gt-a-link">
+                    Mac 系统安装ElasticSearch
+                </a>
+            </div>
         
 
         
