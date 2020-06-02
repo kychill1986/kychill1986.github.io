@@ -3,7 +3,7 @@
     <meta charset="utf-8"/>
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Mac 系统安装ElasticSearch | KYChill</title>
+<title>Java 8 BiFunction 和 BiConsumer使用 | KYChill</title>
 <link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1591100264521">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://kychill1986.github.io/styles/main.css">
@@ -87,116 +87,131 @@
         <div class="post-detail gt-bg-theme-color-second">
             <article class="gt-post-content">
                 <h2 class="post-title">
-                    Mac 系统安装ElasticSearch
+                    Java 8 BiFunction 和 BiConsumer使用
                 </h2>
                 <div class="post-info">
                     <time class="post-time gt-c-content-color-first">
-                        · 2020-03-11 ·
+                        · 2020-06-02 ·
                     </time>
                     
-                        <a href="https://kychill1986.github.io/tag/OAUKSjWmm/" class="post-tags">
-                            # ElasticSearch
+                        <a href="https://kychill1986.github.io/tag/z26SMVX5G/" class="post-tags">
+                            # java
+                        </a>
+                    
+                        <a href="https://kychill1986.github.io/tag/XADNlArnf1/" class="post-tags">
+                            # 函数式编程
                         </a>
                     
                 </div>
                 <div class="post-content">
-                    <p>🖥包含单机安装，以及集群配置介绍...</p>
-<!-- more -->
-<h2 id="单机安装">单机安装</h2>
-<ol>
-<li>下载elasticSearch http://elastic.co</li>
-<li>解压elasticSearch...tar.gz</li>
-<li>启动elasticSearch<br>
-<code>./bin/elasticsearch -d #后台运行</code></li>
-</ol>
-<h2 id="安装elasticsearch-head插件">安装elasticSearch-head插件</h2>
-<ol>
-<li>下载elasticSearch-head，访问gitHub，搜索elasticSearch-head，在搜索结果里点击“mobz/elasticsearch-head”</li>
-<li>解压elasticSearch-head</li>
-<li>cd '/Users/xxx/Documents/Tools/ElasticSearch/elasticsearch-head-master/'</li>
-<li>安装最新版node <code>brew install node</code></li>
-<li>安装grunt <code>npm install -g grunt-cli</code></li>
-<li>在elasticsearch-head-master目录执行 npm install</li>
-</ol>
-<pre><code>如果安装过程中出现：
-1. Failed at the phantomjs-prebuilt@2.1.15 install script ‘node install.js’.
-解决方法：
-npm install phantomjs-prebuilt@2.1.15 --ignore-scripts
-2. Local Npm module &quot;grunt-contrib-jasmine&quot; not found. Is it installed
-解决办法：
-npm install grunt-contrib-jasmine --registry=https://registry.npm.taobao.org #使用国内镜像
+                    <h1 id="bifunction">BiFunction</h1>
+<p>这里提醒一点，可以看出该接口中有方法的实现，不单单只有抽象方法，在java8中，有一个新的改进就是在现有的接口中增加了一些默认的方法实现，使用default关键字来修饰。这种做法不会影响以前代码对接口的实现，也对原有的接口进行了扩展。<br>
+传递行为给方法，而不是传递值。</p>
+<pre><code class="language-java">/**
+ * BiFunction是一个函数式接口，它接口两个参数并产生一个结果值返回。
+ * 它里面有一个apply(Object,Object)方法。
+ * @param &lt;T&gt; 函数的第一个参数类型
+ * @param &lt;U&gt; 函数的第二个参数类型
+ * @param &lt;R&gt; 函数的结果类型
+ * @since 1.8
+ */
+@FunctionalInterface
+public interface BiFunction&lt;T, U, R&gt; {
+
+    /**
+     * 将apply函数应用到给定的参数上面
+     *
+     * @param t 函数的第一个参数
+     * @param u 函数的第二个参数
+     * @return R 函数的结果
+     */
+    R apply(T t, U u);
+
+    /**
+     * 返回一个组合的函数，第一次是将该函数应用到它的输入，接着是将该函数的after应用到
+     * 之前的结果上。如果在任一函数评测期间抛出异常，它都会被传递给组合函数的调用者。
+     * @param &lt;V&gt; 组合函数和after函数的输出类型
+     * @param after 该函数应用将被在当前函数apply后被apply
+     * @return 返回一个组合函数，第一次应用该函数，接着应用after函数
+     * @throws 当after为null的时候，会抛出NullPointerException异常。
+     */
+    default &lt;V&gt; BiFunction&lt;T, U, V&gt; andThen(Function&lt;? super R, ? extends V&gt; after) {
+        Objects.requireNonNull(after);
+        return (T t, U u) -&gt; after.apply(apply(t, u));
+    }
+}
 </code></pre>
-<ol start="7">
-<li>启动elasticSearch-head</li>
-</ol>
-<pre><code>npm run start
+<pre><code class="language-java">import java.util.function.BiFunction;
+import java.util.function.Function;
+
+public class BiFunctionTest {
+    public static void main(String[] args){
+        BiFunctionTest test = new BiFunctionTest();
+        //实现四则运算
+        System.out.println(test.compute(4,2,(value1,value2)-&gt;value1+value2));
+        System.out.println(test.compute(4,2,(v1,v2)-&gt;v1-v2));
+        System.out.println(test.compute(1,2,(v1,v2)-&gt;v1*v2));
+        System.out.println(test.compute(3,2,(v1,v2)-&gt;v1/v2));
+        System.out.println(test.calcute(3,4,(v1,v2)-&gt;v1+v2,v-&gt;v * v));
+    }
+
+    public  int compute(int num1, int num2, BiFunction&lt;Integer,Integer,Integer&gt; biFunction){
+        return  biFunction.apply(num1,num2);
+    }
+
+    public int calcute(int num1, int num2, BiFunction&lt;Integer,Integer,Integer&gt; biFunction, Function&lt;Integer,Integer&gt; function){
+        //调用addThen首先对接收的两个参数进行bifunction的apply，然后在进行function的apply
+        return biFunction.andThen(function).apply(num1,num2);
+    }
+}
 </code></pre>
-<ol start="8">
-<li>测试：http://serverip:9100/</li>
-</ol>
-<h2 id="配置elasticsearch">配置elasticsearch</h2>
-<p>使elasticSearch-head能正常访问（这两个是独立的进程，有跨域问题），修改elasticsearch，config/elasticsearch.yml文件，加入如下代码：</p>
-<pre><code class="language-yml">http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
+<p>输出结果：</p>
+<pre><code>6
+2
+2
+1
+49
 </code></pre>
-<p>重新启动elasticsearch，访问elasticSearch-head，http://serverip:9100/</p>
-<h2 id="elasticsearch集群配置">ElasticSearch集群配置</h2>
-<h3 id="修改configelasticsearchyml文件">修改config/elasticsearch.yml文件</h3>
-<p>master:</p>
-<pre><code class="language-yml">http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
-
-cluster.name: chillcluster
-node.name: chillmaster
-node.master: true
+<h1 id="biconsumer">BiConsumer</h1>
+<p>BiConsumer&lt;T,U&gt;接口是java8 Function函数里面的接口，它有两个方法， BiConsumer用法很简单。</p>
+<pre><code class="language-java">//接收参数
+void accept(T t, U u)
+//默认方法，基本没什么用
+default BiConsumer&lt;T,U&gt; andThen(BiConsumer&lt;? super T,? super U&gt; after)
 </code></pre>
-<p>slave1:</p>
-<pre><code class="language-yml">cluster.name: chillcluster
-node.name: slave1
+<p>BiConsumer用法示例(java8)示例如下，andThen(biConsumer)方法没有什么效果(可不用)，主要是学会使用accept(T t, U u)方法，如下。</p>
+<pre><code class="language-java">import java.util.function.BiConsumer;
 
-network.host: 127.0.0.1
-http.port: 9201
-
-discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;] #找到master，如果不做这个配置那么这个节点就是游离于集群之外的
-
+public class TestDemo {
+    public static void main(String[] args) {
+        BiConsumer&lt;String, String&gt; biConsumer = (x, y) -&gt; {
+            System.out.println(x+&quot;===&quot;+y);
+        };
+        biConsumer.andThen(biConsumer).accept(&quot;tpyyes.com &quot;, &quot; java8&quot;);
+    }
+}
 </code></pre>
-<p>slave2:</p>
-<pre><code class="language-yml">cluster.name: chillcluster
-node.name: slave2
-
-network.host: 127.0.0.1
-
-http.port: 9202
-
-discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;] #找到master，如果不做这个配置那么这个节点就是游离于集群之外的
+<p>输出x与y参数的值，如下。</p>
+<pre><code>tpyyes.com === java8
+tpyyes.com === java8
 </code></pre>
 <hr>
-<!-- more -->
-<p>#彩蛋🎆<br>
-官方下载下来的elasticsearch安装包，直接解压，运行以前命令，也可以实现同样的集群效果</p>
-<pre><code class="language-shell">复杂的：
-./elasticsearch -E node.name=chillmaster -E cluster.name=chillcluster -E node.master=true -E http.cors.enabled=true -E http.cors.allow-origin=&quot;*&quot; -E path.data=node1_data -d
-./elasticsearch -E node.name=slave1 -E cluster.name=chillcluster -E network.host=127.0.0.1 -E http.port=9201 -E discovery.zen.ping.unicast.hosts=&quot;127.0.0.1&quot; -E path.data=node2_data -d
-./elasticsearch -E node.name=slave2 -E cluster.name=chillcluster -E network.host=127.0.0.1 -E http.port=9202 -E discovery.zen.ping.unicast.hosts=&quot;127.0.0.1&quot; -E path.data=node3_data -d
-
-
-简单的：
-./elasticsearch -E node.name=node1 -E cluster.name=chillcluster -E path.data=node1_data -d
-./elasticsearch -E node.name=node2 -E cluster.name=chillcluster -E path.data=node2_data -d
-./elasticsearch -E node.name=node3 -E cluster.name=chillcluster -E path.data=node3_data -d
-
-最后用http://127.0.0.1:9200/_cat/nodes，检查下是否正常
-</code></pre>
-<h2 id="reference">Reference</h2>
 <blockquote>
-<p>https://blog.csdn.net/fenglailea/article/details/52934263<br>
-http://www.bubuko.com/infodetail-2108888.html</p>
+<p>https://www.tpyyes.com/a/java/283.html<br>
+http://www.manongjc.com/article/50415.html</p>
 </blockquote>
 
                 </div>
             </article>
         </div>
 
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://kychill1986.github.io/post/elasticsearch-ju-he-fen-ye-pai-xu/" class="post-title gt-a-link">
+                    Elasticsearch 聚合分页排序
+                </a>
+            </div>
         
 
         
