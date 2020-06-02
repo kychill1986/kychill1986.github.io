@@ -3,7 +3,7 @@
     <meta charset="utf-8"/>
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>关于 | KYChill</title>
+<title>Elasticsearch 聚合分页排序 | KYChill</title>
 <link rel="shortcut icon" href="https://kychill1986.github.io/favicon.ico?v=1591087406610">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://kychill1986.github.io/styles/main.css">
@@ -87,27 +87,120 @@
         <div class="post-detail gt-bg-theme-color-second">
             <article class="gt-post-content">
                 <h2 class="post-title">
-                    关于
+                    Elasticsearch 聚合分页排序
                 </h2>
                 <div class="post-info">
                     <time class="post-time gt-c-content-color-first">
-                        · 2019-01-25 ·
+                        · 2020-06-02 ·
                     </time>
                     
                 </div>
                 <div class="post-content">
-                    <blockquote>
-<p>欢迎来到我的小站呀，很高兴遇见你！🤝</p>
+                    <p>请求JSON：</p>
+<pre><code class="language-json">{
+    &quot;query&quot;: {
+        &quot;bool&quot;: {
+            &quot;must&quot;: [
+                {
+                    &quot;match&quot;: {
+                        &quot;oos&quot;: true
+                    }
+                }
+            ]
+        }
+    },
+    &quot;aggs&quot;: {
+        &quot;by_wog&quot;: {
+            &quot;terms&quot;: {
+                &quot;field&quot;: &quot;wog.keyword&quot;,
+                &quot;size&quot;: 100000000
+            },
+            &quot;aggs&quot;: {
+                &quot;sum_num&quot;: {
+                    &quot;sum&quot;: {
+                        &quot;field&quot;: &quot;num&quot;
+                    }
+                },
+                &quot;bucket_field&quot;: {
+                    &quot;bucket_sort&quot;: {
+                        &quot;sort&quot;: [
+                            {
+                                &quot;sum_num&quot;: {
+                                    &quot;order&quot;: &quot;desc&quot;
+                                }
+                            }
+                        ],
+                        &quot;from&quot;: 0,
+                        &quot;size&quot;: 10
+                    }
+                }
+            }
+        }
+    }
+}
+</code></pre>
+<p>Java代码：</p>
+<pre><code class="language-java">SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+BoolQueryBuilder boolBuilder = QueryBuilders.boolQuery();
+boolBuilder.must(QueryBuilders.matchQuery(&quot;oos&quot;, true));
+if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getWarehouseCodeList())) {
+    boolBuilder.must(QueryBuilders.termsQuery(&quot;w.keyword&quot;, w));
+}
+if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getOwnerCodeList())) {
+    boolBuilder.must(QueryBuilders.termsQuery(&quot;o.keyword&quot;, o));
+}
+if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getGoodsCodeList())) {
+    boolBuilder.must(QueryBuilders.termsQuery(&quot;g.keyword&quot;, g));
+}
+sourceBuilder.query(boolBuilder);
+
+TermsAggregationBuilder aggregation = AggregationBuilders.terms(&quot;by_wog&quot;).field(&quot;wog.keyword&quot;).size(100000);
+aggregation.subAggregation(AggregationBuilders.sum(&quot;sum_num&quot;).field(&quot;num&quot;));
+
+List&lt;FieldSortBuilder&gt; fieldSorts = new ArrayList&lt;&gt;();
+fieldSorts.add(new FieldSortBuilder(&quot;sum_num&quot;));
+aggregation.subAggregation(new BucketSortPipelineAggregationBuilder(&quot;bucket_field&quot;, fieldSorts).from((pageQueryShortageBO.getPageNum() - 1) * pageQueryShortageBO.getPageSize()).size(pageQueryShortageBO.getPageSize()));
+sourceBuilder.aggregation(aggregation);
+
+SearchRequest searchRequest = new SearchRequest(skuShortageOrderIndex);
+searchRequest.types(ESConstants.TYPE);
+searchRequest.source(sourceBuilder);
+SearchResponse response = null;
+try {
+    response = client.search(searchRequest, RequestOptions.DEFAULT);
+} catch (IOException e) {
+    log.error(&quot;queryShortageFromES error: {}&quot;, e.getMessage(), e);
+}
+
+if (response != null) {
+    Aggregations aggregations = response.getAggregations();
+    Terms byCompanyAggregation = aggregations.get(&quot;by_wog&quot;);
+    List&lt;? extends Terms.Bucket&gt; buckets = byCompanyAggregation.getBuckets();
+    for (Terms.Bucket bucket : buckets) {
+        Sum sum = bucket.getAggregations().get(&quot;sum_num&quot;);
+        String wog = bucket.getKeyAsString();
+        String[] wogArray = wog.split(ESConstants.WOG_SPLIT_FLAG);
+        
+    }
+}
+</code></pre>
+<p>说明：因为bucket_sort是对聚合之后的桶进行分页排序,所以terms里面的size设置要大于bucket_sort里面分页大小，不然会取不到数据</p>
+<hr>
+<blockquote>
+<p>https://blog.csdn.net/yangzefei1991/article/details/102737500</p>
 </blockquote>
-<h2 id="关于本站">🏠 关于本站</h2>
-<h2 id="博主是谁">👨‍💻 博主是谁</h2>
-<h2 id="兴趣爱好">⛹ 兴趣爱好</h2>
-<h2 id="联系我呀">📬 联系我呀</h2>
 
                 </div>
             </article>
         </div>
 
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/" class="post-title gt-a-link">
+                    虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)
+                </a>
+            </div>
         
 
         
