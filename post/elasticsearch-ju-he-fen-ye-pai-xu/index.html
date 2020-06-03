@@ -86,7 +86,7 @@
             <h1>Elasticsearch 聚合分页排序</h1>
             <span class="meta">
             	Posted on
-              2020-06-02，2 min read
+              2020-06-02，4 min read
             </span>
           </div>
         </div>
@@ -100,7 +100,8 @@
       <div class="row">
         <div class="col-lg-8 col-md-10 mx-auto">
           <p>请求JSON：</p>
-<pre><code class="language-json">{
+<pre><code class="language-json">GET oms_sku_shortage_order_index/_search
+{
     &quot;query&quot;: {
         &quot;bool&quot;: {
             &quot;must&quot;: [
@@ -165,7 +166,7 @@ fieldSorts.add(new FieldSortBuilder(&quot;sum_num&quot;));
 aggregation.subAggregation(new BucketSortPipelineAggregationBuilder(&quot;bucket_field&quot;, fieldSorts).from((pageQueryShortageBO.getPageNum() - 1) * pageQueryShortageBO.getPageSize()).size(pageQueryShortageBO.getPageSize()));
 sourceBuilder.aggregation(aggregation);
 
-SearchRequest searchRequest = new SearchRequest(skuShortageOrderIndex);
+SearchRequest searchRequest = new SearchRequest(&quot;shortage_index&quot;);
 searchRequest.types(ESConstants.TYPE);
 searchRequest.source(sourceBuilder);
 SearchResponse response = null;
@@ -189,9 +190,60 @@ if (response != null) {
 </code></pre>
 <p>说明：因为bucket_sort是对聚合之后的桶进行分页排序,所以terms里面的size设置要大于bucket_sort里面分页大小，不然会取不到数据</p>
 <hr>
-<blockquote>
-<p>https://blog.csdn.net/yangzefei1991/article/details/102737500</p>
-</blockquote>
+<p>计算count：</p>
+<pre><code class="language-json">GET oms_sku_shortage_order_index/_search
+{
+  &quot;query&quot;: {
+    &quot;bool&quot;: {
+      &quot;must&quot;: [
+        {&quot;match&quot;: {
+          &quot;oos&quot;: true
+        }}
+      ]
+    }
+  },
+  &quot;aggs&quot;: {
+    &quot;by_wog&quot;: {
+      &quot;cardinality&quot;: {
+        &quot;field&quot;: &quot;wog.keyword&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p>Java代码：</p>
+<pre><code class="language-java">SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+BoolQueryBuilder boolBuilder = QueryBuilders.boolQuery();
+boolBuilder.must(QueryBuilders.matchQuery(&quot;oos&quot;, true));
+if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getWarehouseCodeList())) {
+    boolBuilder.must(QueryBuilders.termsQuery(&quot;w.keyword&quot;, w));
+}
+if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getOwnerCodeList())) {
+    boolBuilder.must(QueryBuilders.termsQuery(&quot;o.keyword&quot;, o));
+}
+if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getGoodsCodeList())) {
+    boolBuilder.must(QueryBuilders.termsQuery(&quot;g.keyword&quot;, g));
+}
+sourceBuilder.query(boolBuilder);
+
+CardinalityAggregationBuilder aggregation = AggregationBuilders.cardinality(&quot;by_wog&quot;).field(&quot;wog.keyword&quot;);
+sourceBuilder.aggregation(aggregation);
+SearchRequest searchRequest = new SearchRequest(&quot;shortage_index&quot;);
+searchRequest.types(ESConstants.TYPE);
+searchRequest.source(sourceBuilder);
+SearchResponse response = null;
+try {
+    response = client.search(searchRequest, RequestOptions.DEFAULT);
+} catch (IOException e) {
+    log.error(&quot;getShortageTotalPage error: {}&quot;, e.getMessage(), e);
+}
+
+if (response != null) {
+    Aggregations aggregations = response.getAggregations();
+    Cardinality byCompanyAggregation = aggregations.get(&quot;by_wog&quot;);
+    return Integer.parseInt(String.valueOf(byCompanyAggregation.getValue()));
+}
+</code></pre>
 
           
           <p class="next-post">下一篇：
