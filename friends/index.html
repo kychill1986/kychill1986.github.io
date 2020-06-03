@@ -2,9 +2,10 @@
 <html>
 
 <head>
-    <meta charset="utf-8" />
+    
+                <meta charset="utf-8" />
 <title>
-    KYChill
+    Friends | KYChill
 </title>
 <!--[if lt IE 9]><script src="//cdn.bootcss.com/html5shiv/r29/html5.js"></script><![endif]-->
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
@@ -47,7 +48,7 @@
                     })();
                 </script>
                 
-        <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js"></script>
+                    
 </head>
 
 <body>
@@ -160,67 +161,59 @@
 </script>
             <div class="main">
                 <div class="container">
-                    <div class="intro">
-                        <div class="avatar">
-                            <a href="https://kychill1986.github.io"><img src="https://kychill1986.github.io/images/avatar.png?v=1591152310363"></a>
-                        </div>
-                        <div class="nickname">
-                            KYChill
-                        </div>
-                        <div class="description">
-                            <span id="subtitle">
-                                Simple &amp; Easy
-                            </span>
-                        </div>
-                        <div class="links">
+                    <article class="post-wrap">
+                        <header class="post-header">
+                            <h1 class="post-title zh">
+                                &#x53CB;&#x94FE;
+                            </h1>
+                            <h1 class="post-title en">
+                                Friends
+                            </h1>
+                        </header>
+                        <div class="post-content">
                             
                                 
-                                        
-                                
-                                        
-                                
-                                        
-                                
-                                        
-                                
-                                        
-                                
-                                        
-                                
-                                        
-                                
-                                        
-                                
-                                        
-                                
+                                    <div class="friend-box">
+                                        <img class="friend-avatar" src="https://blog.itjoker.cn/images/avatar.png">
+                                        <div class="flink-info">
+                                            <a href="https://blog.itjoker.cn" target="_blank">
+                                                ITJoker
+                                            </a>
+                                            <br />
+                                            ITJoker&#39;s Blog
+                                        </div>
+                                    </div>
+                                    
                                         
                         </div>
-                    </div>
+                    </article>
                 </div>
             </div>
-    </div>
+            
+                
+                    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
 
-</body>
+<div id="gitalk-container" style="width: 100%;max-width: 780px;margin: auto;"></div>
+
 <script>
-    // type 
-    var typed = new Typed("#subtitle", {
-        strings: ['Simple &amp; Easy', '', ''],
-        startDelay: 10,
-        typeSpeed: 200,
-        loop: true,
-        backSpeed: 100,
-        showCursor: true
-    });
-    //head title
-    var titleTime;
-    document.addEventListener("visibilitychange", function() {
-        document.hidden ? (document.title = "\uD83D\uDE25" + OriginTitile, clearTimeout(titleTime)) : (document.title = "\uD83D\uDE1D" + OriginTitile, titleTime = setTimeout(function() {
-            document.title = OriginTitile
-        }, 2E3))
-    });
-    var OriginTitile = document.title;
-</script>
+    var gitalk = new Gitalk({
+        clientID: 'a213b660185e926c7735',
+        clientSecret: '17078e51db301069c576668d1873c777a6bd983f',
+        repo: 'kychill1986.github.io',
+        owner: 'kychill1986',
+        admin: ['kychill1986'],
+        id: (location.pathname).substring(0, 49), // Ensure uniqueness and length less than 50
+        distractionFreeMode: false // Facebook-like distraction free mode
+    })
 
+    gitalk.render('gitalk-container')
+</script>
+                        
+                                    
+                                        
+    </div>
+    
         <footer id="footer" class="footer">
             <div class="copyright">
                 
@@ -330,5 +323,6 @@
                         tpwidget("show");
                     </script>
                     
+</body>
 
 </html>

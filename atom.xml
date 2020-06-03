@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://kychill1986.github.io</id>
     <title>KYChill</title>
-    <updated>2020-06-03T01:53:29.313Z</updated>
+    <updated>2020-06-03T02:45:14.459Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://kychill1986.github.io"/>
     <link rel="self" href="https://kychill1986.github.io/atom.xml"/>
@@ -10,6 +10,13 @@
     <logo>https://kychill1986.github.io/images/avatar.png</logo>
     <icon>https://kychill1986.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, KYChill</rights>
+    <entry>
+        <title type="html"><![CDATA[ElasticSearch中composite聚合的使用【转】]]></title>
+        <id>https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/</id>
+        <link href="https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/">
+        </link>
+        <updated>2020-06-03T02:10:54.000Z</updated>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Java 8 BiFunction 和 BiConsumer使用]]></title>
         <id>https://kychill1986.github.io/post/java-8-bifunction-he-biconsumer-shi-yong/</id>

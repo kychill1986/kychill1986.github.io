@@ -162,7 +162,7 @@
                     <article class="post-wrap">
                         <header class="post-header">
                             <h1 class="post-title">
-                                Elasticsearch 聚合分页排序
+                                ElasticSearch中composite聚合的使用【转】
                             </h1>
                             
                                 <!--en-->
@@ -172,15 +172,17 @@
                                         KYChill
                                     </a>
                                     <span class="post-time">
-                                Date: <a href="#">2020-06-02</a>
+                                Date: <a href="#">2020-06-03</a>
                             </span>
                                     <span class="post-readtime">Reading Time:<a
-                                    href="#">3.0
+                                    href="#">12.1
                                     mins</a></span>
-                                    <span class="post-words">words:<a href="#">513</a></span>
+                                    <span class="post-words">words:<a href="#">2477</a></span>
                                     
                                         <span class="post-category">
                                 Category:
+                                
+                                <a href="https://kychill1986.github.io/tag/z26SMVX5G/">java</a>
                                 
                                 <a href="https://kychill1986.github.io/tag/OAUKSjWmm/">ElasticSearch</a>
                                 
@@ -194,159 +196,306 @@
                         </header>
                         
                         <div class="post-content">
-                            <h1 id="分页">分页</h1>
-<p>请求JSON：</p>
-<pre><code class="language-json">GET oms_sku_shortage_order_index/_search
-{
-    &quot;query&quot;: {
-        &quot;bool&quot;: {
-            &quot;must&quot;: [
-                {
-                    &quot;match&quot;: {
-                        &quot;oos&quot;: true
-                    }
-                }
-            ]
+                            <h1 id="简介composite">简介composite</h1>
+<p>composite是一个多桶聚合，它从不同的源创建复合桶，与其他多桶聚合不同，复合聚合可用于高效地对多级聚合中的所有桶进行分页。这种聚合提供了一种方法来流特定聚合的所有桶，类似于滚动对文档所做的操作。</p>
+<p>组合桶是由为每个文档提取/创建的值的组合构建的，每个组合被视为组合桶。如下为官方给的例子：</p>
+<pre><code class="language-json">{
+    &quot;keyword&quot;: [&quot;foo&quot;, &quot;bar&quot;],
+    &quot;number&quot;: [23, 65, 76]
+}
+</code></pre>
+<p>如果我们同时对keyword和number两个字段进行聚合会得出以下的结果:</p>
+<pre><code class="language-json">{ &quot;keyword&quot;: &quot;foo&quot;, &quot;number&quot;: 23 }
+{ &quot;keyword&quot;: &quot;foo&quot;, &quot;number&quot;: 65 }
+{ &quot;keyword&quot;: &quot;foo&quot;, &quot;number&quot;: 76 }
+{ &quot;keyword&quot;: &quot;bar&quot;, &quot;number&quot;: 23 }
+{ &quot;keyword&quot;: &quot;bar&quot;, &quot;number&quot;: 65 }
+{ &quot;keyword&quot;: &quot;bar&quot;, &quot;number&quot;: 76 }
+</code></pre>
+<p>看到上面的例子是不是恍然大悟， 就像类似sql中的多group by 多字段，可以对多个字段进行聚合，这非常适用于对于多维度出报表的需求，我这里建议使用的版本为6.5+，因为6.5版本以下此功能还处于测试阶段，设计和代码没有正式的GA功能成熟，并且没有担保。当然我这里也会提供6.5版本以下如何进行多聚合字段的使用。</p>
+<p>首先上官方文档地址:</p>
+<p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/6.5/search-aggregations-bucket-composite-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/6.5/search-aggregations-bucket-composite-aggregation.html</a></p>
+<p>其实官方文档已经把该功能说得很详细，如果你只是单纯写DSL实现的话看官方文档就可以，我接下来就介绍如何调用他的javaAPI来使用，当然如果阅读源码能力强的话也可以直接看官方在github的test,地址如下:</p>
+<p><a href="https://github.com/elastic/elasticsearch/tree/master/server/src/test/java/org/elasticsearch/search/aggregations/bucket/composite">https://github.com/elastic/elasticsearch/tree/master/server/src/test/java/org/elasticsearch/search/aggregations/bucket/composite</a></p>
+<h1 id="验证多字段聚合可行性">验证多字段聚合可行性</h1>
+<p>上面的例子为官方例子，我们需要自己弄个例子检查可行性，我们现在创建一个index,索引名为composite_test,mapping如下</p>
+<pre><code class="language-json">{
+        &quot;area&quot; : {
+            &quot;type&quot; : &quot;keyword&quot;
+        },
+        &quot;userid&quot; : {
+            &quot;type&quot; : &quot;keyword&quot;
+        },
+        &quot;sendtime&quot; : {
+            &quot;type&quot; : &quot;date&quot;,
+            &quot;format&quot; : &quot;yyyy-MM-dd HH:mm:ss&quot;
         }
-    },
-    &quot;aggs&quot;: {
-        &quot;by_wog&quot;: {
-            &quot;terms&quot;: {
-                &quot;field&quot;: &quot;wog.keyword&quot;,
-                &quot;size&quot;: 100000000
-            },
-            &quot;aggs&quot;: {
-                &quot;sum_num&quot;: {
-                    &quot;sum&quot;: {
-                        &quot;field&quot;: &quot;num&quot;
-                    }
-                },
-                &quot;bucket_field&quot;: {
-                    &quot;bucket_sort&quot;: {
-                        &quot;sort&quot;: [
-                            {
-                                &quot;sum_num&quot;: {
-                                    &quot;order&quot;: &quot;desc&quot;
-                                }
-                            }
-                        ],
-                        &quot;from&quot;: 0,
-                        &quot;size&quot;: 10
-                    }
-                }
-            }
+}
+</code></pre>
+<p>我们创建好了index，index中一共有三个字段，area，userid，sendtime三个字段，我们也使用MySQL数据建一个一模一样的表，方便对比聚合出来的数据是否正确，表名为composite_test。</p>
+<p>我们首先对数据表composite_test插入5条记录，分别如下<br>
+<img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfevtc5ta3j20af03yq2z.jpg" alt="WX20200603-101535.png" loading="lazy"></p>
+<p>使用group by对三个字段进行聚合，以下为在数据库中的实现：</p>
+<pre><code class="language-sql">SELECT COUNT(1),area,userid,sendtime FROM composite_test GROUP BY area,userid,sendtime
+</code></pre>
+<p>结果如下:<br>
+<img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfevuls6n8j209z02uaa1.jpg" alt="WX20200603-101535.png" loading="lazy"></p>
+<p>以上为数据库的聚合实现，所以我们使用ES进行多字段聚合的时候如果结果和以上的一样则是正确的，我们也一样往ES composite_test索引中 插入相同的5条数据,在kibana上执行以下命令插入。</p>
+<pre><code class="language-json">POST composite_test/_bulk
+{ &quot;index&quot; : {&quot;_type&quot; :&quot;_doc&quot;}}
+{&quot;area&quot;:&quot;33&quot;,&quot;userid&quot;:&quot;400015&quot;,&quot;sendtime&quot;:&quot;2019-01-17 00:00:00&quot;}
+{ &quot;index&quot; : {&quot;_type&quot; : &quot;_doc&quot;}}
+{&quot;area&quot;:&quot;33&quot;,&quot;userid&quot;:&quot;400015&quot;,&quot;sendtime&quot;:&quot;2019-01-17 00:00:00&quot;}
+{ &quot;index&quot; : {&quot;_type&quot; : &quot;_doc&quot;}}
+{&quot;area&quot;:&quot;35&quot;,&quot;userid&quot;:&quot;400016&quot;,&quot;sendtime&quot;:&quot;2019-01-18 00:00:00&quot;}
+{ &quot;index&quot; : { &quot;_type&quot; : &quot;_doc&quot;}}
+{&quot;area&quot;:&quot;35&quot;,&quot;userid&quot;:&quot;400016&quot;,&quot;sendtime&quot;:&quot;2019-01-18 00:00:00&quot;}
+{ &quot;index&quot; : {&quot;_type&quot; : &quot;_doc&quot;}}
+{&quot;area&quot;:&quot;33&quot;,&quot;userid&quot;:&quot;400017&quot;,&quot;sendtime&quot;:&quot;2019-01-17 00:00:00&quot;}
+</code></pre>
+<p>查询ES，我们发现已经存在了这5条数据了。</p>
+<figure data-type="image" tabindex="1"><img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfevvpvlfij20dc03zglo.jpg" alt="WX20200603-101535.png" loading="lazy"></figure>
+<p>接下来我们先使用composite的DSL查询：</p>
+<pre><code class="language-json">GET composite_test/_search
+{
+    &quot;size&quot;: 0, 
+    &quot;aggs&quot; : {
+      &quot;my_buckets&quot;: {
+        &quot;composite&quot; : {
+           &quot;sources&quot; : [
+              { &quot;area&quot;: { &quot;terms&quot;: {&quot;field&quot;: &quot;area&quot; } } },
+               { &quot;userid&quot;: { &quot;terms&quot;: {&quot;field&quot;: &quot;userid&quot; } } },
+               { &quot;sendtime&quot;: { &quot;date_histogram&quot;: { &quot;field&quot;: &quot;sendtime&quot;,&quot;interval&quot;: &quot;1d&quot;,&quot;format&quot;: &quot;yyyy-MM-dd&quot;} } }
+             ]
+         }
         }
     }
 }
 </code></pre>
-<p>Java代码：</p>
-<pre><code class="language-java">SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-BoolQueryBuilder boolBuilder = QueryBuilders.boolQuery();
-boolBuilder.must(QueryBuilders.matchQuery(&quot;oos&quot;, true));
-if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getWarehouseCodeList())) {
-    boolBuilder.must(QueryBuilders.termsQuery(&quot;w.keyword&quot;, w));
+<p>DSL中参数的意思请自行参考官方文档，都说得很详细的,以上这句理论上是等值于数据库的那句聚合语句的，查询结果如下</p>
+<pre><code class="language-json">[
+        {
+          &quot;key&quot; : {
+            &quot;area&quot; : &quot;33&quot;,
+            &quot;userid&quot; : &quot;400015&quot;,
+            &quot;sendtime&quot; : &quot;2019-01-17&quot;
+          },
+          &quot;doc_count&quot; : 2
+        },
+        {
+          &quot;key&quot; : {
+            &quot;area&quot; : &quot;33&quot;,
+            &quot;userid&quot; : &quot;400017&quot;,
+            &quot;sendtime&quot; : &quot;2019-01-17&quot;
+          },
+          &quot;doc_count&quot; : 1
+        },
+        {
+          &quot;key&quot; : {
+            &quot;area&quot; : &quot;35&quot;,
+            &quot;userid&quot; : &quot;400016&quot;,
+            &quot;sendtime&quot; : &quot;2019-01-18&quot;
+          },
+          &quot;doc_count&quot; : 2
+        }
+]
+</code></pre>
+<p>从以上响应的json数组中我们不难看出，该聚合聚合出来的数据是和数据库聚合出来的数据是一致的，所以 composite是可以使用在多字段聚合上的。论证完可行性，我们接下来使用java来实现，实话说这一块我是看源代码才会使用的，网上资料基本为0，而且官方java使用文档里也没用，的确是与遇到了不少坑，写出来方便以后使用能快速回忆。</p>
+<h1 id="java使用composite聚合">java使用composite聚合</h1>
+<p>首先创建Maven项目,加入ElasticSearch依赖：</p>
+<pre><code class="language-xml">&lt;dependency&gt;
+    &lt;groupId&gt;org.elasticsearch.client&lt;/groupId&gt;
+    &lt;artifactId&gt;elasticsearch-rest-high-level-client&lt;/artifactId&gt;
+    &lt;version&gt;6.5.4&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
+<p>直接上实现代码:</p>
+<pre><code class="language-java">SearchRequest searchRequest = new SearchRequest(&quot;composite_test&quot;); 
+searchRequest.types(&quot;_doc&quot;);
+SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder(); 
+searchSourceBuilder.size(0);
+/********************以下组装聚合的三个字段****************************/
+List&lt;CompositeValuesSourceBuilder&lt;?&gt;&gt; sources = new ArrayList&lt;&gt;();
+		
+DateHistogramValuesSourceBuilder sendtime = new DateHistogramValuesSourceBuilder(&quot;sendtime&quot;)
+                .field(&quot;sendtime&quot;)
+                .dateHistogramInterval(DateHistogramInterval.days(1))
+                .format(&quot;yyyy-MM-dd&quot;).order(SortOrder.DESC).missingBucket(false);
+        sources.add(sendtime);
+TermsValuesSourceBuilder userid = new TermsValuesSourceBuilder(&quot;userid&quot;).field(&quot;userid&quot;).missingBucket(true);
+        sources.add(userid);
+        TermsValuesSourceBuilder dttype = new TermsValuesSourceBuilder(&quot;area&quot;).field(&quot;area&quot;).missingBucket(true);
+        sources.add(dttype);
+        CompositeAggregationBuilder  composite =new CompositeAggregationBuilder(&quot;my_buckets&quot;, sources);
+composite.size(1000);
+/*********************执行查询******************************/
+searchSourceBuilder.aggregation(composite);
+searchRequest.source(searchSourceBuilder); 
+SearchResponse searchResponse = client.search(searchRequest,RequestOptions.DEFAULT);
+/********************取出数据*******************/
+Aggregations aggregations = searchResponse.getAggregations();
+ParsedComposite parsedComposite = aggregations.get(&quot;my_buckets&quot;);
+List&lt;ParsedBucket&gt; list =  parsedComposite.getBuckets();
+Map&lt;String,Object&gt; data = new HashMap&lt;&gt;();
+for(ParsedBucket parsedBucket:list){
+	data.clear();
+	for (Map.Entry&lt;String, Object&gt; m :  parsedBucket.getKey().entrySet()) {
+		data.put(m.getKey(),m.getValue());
+	}
+	data.put(&quot;count&quot;,parsedBucket.getDocCount());
+	    System.out.println(data);
 }
-if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getOwnerCodeList())) {
-    boolBuilder.must(QueryBuilders.termsQuery(&quot;o.keyword&quot;, o));
-}
-if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getGoodsCodeList())) {
-    boolBuilder.must(QueryBuilders.termsQuery(&quot;g.keyword&quot;, g));
-}
-sourceBuilder.query(boolBuilder);
-
-TermsAggregationBuilder aggregation = AggregationBuilders.terms(&quot;by_wog&quot;).field(&quot;wog.keyword&quot;).size(100000);
-aggregation.subAggregation(AggregationBuilders.sum(&quot;sum_num&quot;).field(&quot;num&quot;));
-
-List&lt;FieldSortBuilder&gt; fieldSorts = new ArrayList&lt;&gt;();
-fieldSorts.add(new FieldSortBuilder(&quot;sum_num&quot;));
-aggregation.subAggregation(new BucketSortPipelineAggregationBuilder(&quot;bucket_field&quot;, fieldSorts).from((pageQueryShortageBO.getPageNum() - 1) * pageQueryShortageBO.getPageSize()).size(pageQueryShortageBO.getPageSize()));
-sourceBuilder.aggregation(aggregation);
-
-SearchRequest searchRequest = new SearchRequest(&quot;shortage_index&quot;);
-searchRequest.types(ESConstants.TYPE);
-searchRequest.source(sourceBuilder);
-SearchResponse response = null;
-try {
-    response = client.search(searchRequest, RequestOptions.DEFAULT);
-} catch (IOException e) {
-    log.error(&quot;queryShortageFromES error: {}&quot;, e.getMessage(), e);
-}
-
-if (response != null) {
-    Aggregations aggregations = response.getAggregations();
-    Terms byCompanyAggregation = aggregations.get(&quot;by_wog&quot;);
-    List&lt;? extends Terms.Bucket&gt; buckets = byCompanyAggregation.getBuckets();
-    for (Terms.Bucket bucket : buckets) {
-        Sum sum = bucket.getAggregations().get(&quot;sum_num&quot;);
-        String wog = bucket.getKeyAsString();
-        String[] wogArray = wog.split(ESConstants.WOG_SPLIT_FLAG);
-        
-    }
+/*************************************/
+</code></pre>
+<p>代码中的client为RestHighLevelClient，请自行初始化，然后执行代码，控制台打印如下:</p>
+<pre><code class="language-json">{area=35, count=2, sendtime=2019-01-18, userid=400016}
+{area=33, count=2, sendtime=2019-01-17, userid=400015}
+{area=33, count=1, sendtime=2019-01-17, userid=400017}
+</code></pre>
+<p>数据正确，方法可用，其实这个方法是RestHighLevelClient替我们封装了composite生成DSL。</p>
+<p>这里注意一下missingBucket的设置，这个的意思是如果该字段没值，为true的时候会返回null，为false不返回整条数据，注意这里是整条数据，而不是单单这个字段而已。</p>
+<h1 id="低版本使用es多字段聚合">低版本使用ES多字段聚合</h1>
+<p>以上就是composite的验证和在java中的使用方法，建议在6.5+版本使用，但这个时候小伙伴可能会问，如果我是6.5以下的版本呢，这里我也有一个方法，只不过是有点绕，直接上代码：</p>
+<pre><code class="language-java">SearchRequest searchRequest = new SearchRequest(&quot;composite_test&quot;); 
+searchRequest.types(&quot;_doc&quot;);
+SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder(); 
+searchSourceBuilder.size(0);
+/********************以下组装聚合的三个字段****************************/
+AggregationBuilder sendtime=AggregationBuilders.dateHistogram(&quot;sendtime&quot;).field(&quot;sendtime&quot;).format(&quot;yyyy-MM-dd&quot;).interval(86400000);
+AggregationBuilder area=AggregationBuilders.terms(&quot;area&quot;).field(&quot;area&quot;);
+AggregationBuilder userid=AggregationBuilders.terms(&quot;userid&quot;).field(&quot;userid&quot;);
+//实现功能关键点
+area.subAggregation(userid);
+sendtime.subAggregation(area);
+/*********************执行查询******************************/
+searchSourceBuilder.aggregation(sendtime);
+searchRequest.source(searchSourceBuilder); 
+SearchResponse searchResponse = client.search(searchRequest,RequestOptions.DEFAULT);
+/********************取出数据*******************/
+Aggregations aggregations = searchResponse.getAggregations();
+//取出数据
+aggHandle(aggregations);
+/*************************************/
+</code></pre>
+<p>运行响应的数据为</p>
+<pre><code class="language-json">{area=33, count=2, sendtime=2019-01-17, userid=400015}, 
+{area=33, count=1, sendtime=2019-01-17, userid=400017}, 
+{area=35, count=2, sendtime=2019-01-18, userid=400016}
+</code></pre>
+<p>所以使用这个方法也能多值聚合数据，其中实现的关键点在于</p>
+<pre><code class="language-java">area.subAggregation(userid);
+sendtime.subAggregation(area);
+</code></pre>
+<p>这里相当于把每个桶给串联起来，串联顺序无要求，但用这种方法最后取数据的时候比较麻烦，我这里也分享一个我取数据的方法</p>
+<pre><code class="language-java">private static List&lt;Map&lt;String,Object&gt;&gt; listmap =new ArrayList&lt;Map&lt;String,Object&gt;&gt;();
+private static Map&lt;String,Object&gt; map =new HashMap&lt;String,Object&gt;(16);
+//使用递归的方式将聚合数据中的数据一一取出来
+private static void aggHandle(Aggregations agg){
+		 String name =&quot;&quot;;
+		 Long longValue = 0L;
+	  for(Aggregation data:agg){
+			 name = data.getName();
+			 Object obj = agg.get(name);
+		 if(obj instanceof Terms){
+			 Terms terms = (Terms) obj;
+			 name = terms.getName();
+			 if(terms.getBuckets().size()==0){
+				 listmap.add(clonMap(map));
+			 }
+			for (Terms.Bucket entry : terms.getBuckets()) {	
+				
+	     		map.put(name, entry.getKey());
+	     		longValue = entry.getDocCount();
+	     		map.put(count, longValue);
+	     		List&lt;Aggregation&gt; list = entry.getAggregations().asList();
+	     		if(list==null||list.isEmpty()){
+	    			listmap.add(clonMap(map));
+	     		}else{
+	     			aggHandle(entry.getAggregations());
+	     		}
+			}
+		 }else if(obj instanceof ParsedDateHistogram){
+			 ParsedDateHistogram terms = (ParsedDateHistogram) obj; 
+			 List&lt;? extends Bucket&gt; buckets = terms.getBuckets(); 
+			 name = terms.getName();
+			 if(buckets.size()==0){
+				 listmap.add(clonMap(map));
+			 }
+			 for(Bucket entry:buckets){
+				 	map.put(name,entry.getKeyAsString());
+		     		longValue = entry.getDocCount();
+		     		map.put(count, longValue);
+				List&lt;Aggregation&gt; list = entry.getAggregations().asList();
+		     	if(list==null||list.isEmpty()){
+		    		listmap.add(clonMap(map));
+		    		//map.clear();
+		     	}else{
+		     		aggHandle(entry.getAggregations());
+	     		}
+			 }
+		 }else if(obj instanceof Max){
+			 Max max =(Max) obj;
+			 name = max.getName();
+			 Double value = max.getValue();
+			 longValue  =value.longValue();
+			 map.put(name, longValue);
+			 listmap.add(clonMap(map));
+		 }else if(obj instanceof Min){
+			 Min min =(Min) obj;
+			 Double value = min.getValue();
+			 longValue  =value.longValue();
+			 map.put(min.getName(), longValue);
+			 listmap.add(clonMap(map));
+		 }else if(obj instanceof Avg){
+			 Avg avg = (Avg) obj;
+			 Double value = avg.getValue();
+			 longValue  =value.longValue();
+			 map.put(avg.getName(), longValue);
+			 listmap.add(clonMap(map));
+		 }else if(obj instanceof Sum){
+			 Sum sum = (Sum) obj;
+			 Double value = sum.getValue();
+			 longValue  =value.longValue();
+			 map.put(sum.getName(), longValue);
+			 listmap.add(clonMap(map));
+		 }else if(obj instanceof ValueCount){
+			 ValueCount count = (ValueCount) obj;
+			 longValue  =count.getValue();
+			 map.put(count.getName(), longValue);
+			 listmap.add(clonMap(map));
+		 }else{
+			 System.out.println(&quot;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&quot;+obj);
+		 }
+	   }
+	 }
+/**
+ * 克隆map对象到另外一个map对象里面去
+ * @param map
+ * @return
+ */
+private static Map&lt;String,Object&gt; clonMap(Map&lt;String,Object&gt; mapTo){
+	Map&lt;String,Object&gt; map = new HashMap&lt;String,Object&gt;(16);
+	for (Map.Entry&lt;String,Object&gt; entry : mapTo.entrySet()) {
+		String key = entry.getKey();
+		Object value = entry.getValue();
+		map.put(key, value);
+	}
+	return map;
 }
 </code></pre>
-<p>说明：因为bucket_sort是对聚合之后的桶进行分页排序,所以terms里面的size设置要大于bucket_sort里面分页大小，不然会取不到数据</p>
-<h1 id="计算count">计算count</h1>
-<p>请求JSON：</p>
-<pre><code class="language-json">GET oms_sku_shortage_order_index/_search
-{
-  &quot;query&quot;: {
-    &quot;bool&quot;: {
-      &quot;must&quot;: [
-        {&quot;match&quot;: {
-          &quot;oos&quot;: true
-        }}
-      ]
-    }
-  },
-  &quot;aggs&quot;: {
-    &quot;by_wog&quot;: {
-      &quot;cardinality&quot;: {
-        &quot;field&quot;: &quot;wog.keyword&quot;
-      }
-    }
-  }
-}
-</code></pre>
-<p>Java代码：</p>
-<pre><code class="language-java">SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-BoolQueryBuilder boolBuilder = QueryBuilders.boolQuery();
-boolBuilder.must(QueryBuilders.matchQuery(&quot;oos&quot;, true));
-if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getWarehouseCodeList())) {
-    boolBuilder.must(QueryBuilders.termsQuery(&quot;w.keyword&quot;, w));
-}
-if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getOwnerCodeList())) {
-    boolBuilder.must(QueryBuilders.termsQuery(&quot;o.keyword&quot;, o));
-}
-if (CollectionUtils.isNotEmpty(pageQueryShortageBO.getGoodsCodeList())) {
-    boolBuilder.must(QueryBuilders.termsQuery(&quot;g.keyword&quot;, g));
-}
-sourceBuilder.query(boolBuilder);
-
-CardinalityAggregationBuilder aggregation = AggregationBuilders.cardinality(&quot;by_wog&quot;).field(&quot;wog.keyword&quot;);
-sourceBuilder.aggregation(aggregation);
-SearchRequest searchRequest = new SearchRequest(&quot;shortage_index&quot;);
-searchRequest.types(ESConstants.TYPE);
-searchRequest.source(sourceBuilder);
-SearchResponse response = null;
-try {
-    response = client.search(searchRequest, RequestOptions.DEFAULT);
-} catch (IOException e) {
-    log.error(&quot;getShortageTotalPage error: {}&quot;, e.getMessage(), e);
-}
-
-if (response != null) {
-    Aggregations aggregations = response.getAggregations();
-    Cardinality byCompanyAggregation = aggregations.get(&quot;by_wog&quot;);
-    return Integer.parseInt(String.valueOf(byCompanyAggregation.getValue()));
-}
-</code></pre>
+<hr>
+<blockquote>
+<p>https://blog.csdn.net/qq_18895659/article/details/86540548</p>
+</blockquote>
 
                         </div>
                         
                             <div class="post-toc">
                                 <ul class="markdownIt-TOC">
-<li><a href="#%E5%88%86%E9%A1%B5">分页</a></li>
-<li><a href="#%E8%AE%A1%E7%AE%97count">计算count</a></li>
+<li><a href="#%E7%AE%80%E4%BB%8Bcomposite">简介composite</a></li>
+<li><a href="#%E9%AA%8C%E8%AF%81%E5%A4%9A%E5%AD%97%E6%AE%B5%E8%81%9A%E5%90%88%E5%8F%AF%E8%A1%8C%E6%80%A7">验证多字段聚合可行性</a></li>
+<li><a href="#java%E4%BD%BF%E7%94%A8composite%E8%81%9A%E5%90%88">java使用composite聚合</a></li>
+<li><a href="#%E4%BD%8E%E7%89%88%E6%9C%AC%E4%BD%BF%E7%94%A8es%E5%A4%9A%E5%AD%97%E6%AE%B5%E8%81%9A%E5%90%88">低版本使用ES多字段聚合</a></li>
 </ul>
 
                             </div>
@@ -362,7 +511,7 @@ if (response != null) {
 
                                             <p class="copyright-item">
                                                 <span>Permalink:</span>
-                                                <span><a href="https://kychill1986.github.io/post/elasticsearch-ju-he-fen-ye-pai-xu/">https://kychill1986.github.io/post/elasticsearch-ju-he-fen-ye-pai-xu/</a></span>
+                                                <span><a href="https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/">https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/</a></span>
                                             </p>
 
                                             <p class="copyright-item">
@@ -377,9 +526,9 @@ if (response != null) {
                                                         <span style="margin-right:15px">
                                                     <i class="post-share"></i>
                                                     <span>Share:</span>
-                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://kychill1986.github.io/post/elasticsearch-ju-he-fen-ye-pai-xu/"><i class="fa fa-qrcode"></i></a>
-                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/elasticsearch-ju-he-fen-ye-pai-xu/&sharesource=qzone&title=Elasticsearch 聚合分页排序&pics=https://kychill1986.github.io/images/avatar.png?v=1591152310363&summary="><i class="fa fa-qq"></i></a>
-                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/elasticsearch-ju-he-fen-ye-pai-xu/&sharesource=weibo&title=Elasticsearch 聚合分页排序 + " - " + &pic="https://kychill1986.github.io/images/avatar.png?v=1591152310363 "><i class="fa fa-weibo "></i></a>
+                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/"><i class="fa fa-qrcode"></i></a>
+                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/&sharesource=qzone&title=ElasticSearch中composite聚合的使用【转】&pics=https://kychill1986.github.io/images/avatar.png?v=1591152310363&summary="><i class="fa fa-qq"></i></a>
+                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/&sharesource=weibo&title=ElasticSearch中composite聚合的使用【转】 + " - " + &pic="https://kychill1986.github.io/images/avatar.png?v=1591152310363 "><i class="fa fa-weibo "></i></a>
                                                         
                                                                 </span>
                                                                 <!--en-->
@@ -389,6 +538,10 @@ if (response != null) {
                                                                         <span class="tag ">
                         
                         
+                        <a href="https://kychill1986.github.io/tag/z26SMVX5G/">#
+                                                java
+                                                    </a>
+                                                    
                         <a href="https://kychill1986.github.io/tag/OAUKSjWmm/">#
                                                 ElasticSearch
                                                     </a>
@@ -406,13 +559,9 @@ if (response != null) {
                                                                                 <!---->
                                                                                 <section class="post-nav">
                                                                                     
-                                                                                        <a class="prev" rel="prev" href="https://kychill1986.github.io/post/java-8-bifunction-he-biconsumer-shi-yong/">
-                                                                                            Java 8 BiFunction 和 BiConsumer使用
-                                                                                        </a>
-                                                                                        
                                                                                             
-                                                                                                <a class="next" rel="next" href="https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/">
-                                                                                                    虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)
+                                                                                                <a class="next" rel="next" href="https://kychill1986.github.io/post/java-8-bifunction-he-biconsumer-shi-yong/">
+                                                                                                    Java 8 BiFunction 和 BiConsumer使用
                                                                                                 </a>
                                                                                                 
                                                                                 </section>
