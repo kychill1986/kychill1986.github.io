@@ -81,7 +81,7 @@
                         <input id="switch_default" type="checkbox" class="switch_default">
                         <label for="switch_default" class="toggleBtn"></label>
             </div>
-            <form id="gridea-search-form" data-update="1591152401214" action="/search/index.html">
+            <form id="gridea-search-form" data-update="1591153958244" action="/search/index.html">
                 <input class="search-input" autocomplete="off" spellcheck="false" name="q" autofocus="true" placeholder="Search...">
             </form>
         </div>
@@ -100,7 +100,7 @@
                         <!--zh-->
                         <a id="mobile-toggle-theme-zh" class="a zh">&nbsp;&#x6697;&#x9ED1;</a>
                     </div>
-                    <form id="gridea-search-form" data-update="1591152401214" action="/search/index.html">
+                    <form id="gridea-search-form" data-update="1591153958244" action="/search/index.html">
                         <input class="search-input" autocomplete="off" spellcheck="false" name="q" autofocus="true" placeholder="Search...">
                     </form>
                     <!--en-->
@@ -197,14 +197,14 @@
                         
                         <div class="post-content">
                             <h1 id="简介composite">简介composite</h1>
-<p>composite是一个多桶聚合，它从不同的源创建复合桶，与其他多桶聚合不同，复合聚合可用于高效地对多级聚合中的所有桶进行分页。这种聚合提供了一种方法来流特定聚合的所有桶，类似于滚动对文档所做的操作。</p>
-<p>组合桶是由为每个文档提取/创建的值的组合构建的，每个组合被视为组合桶。如下为官方给的例子：</p>
+<p>       composite是一个多桶聚合，它从不同的源创建复合桶，与其他多桶聚合不同，复合聚合可用于高效地对多级聚合中的所有桶进行分页。这种聚合提供了一种方法来流特定聚合的所有桶，类似于滚动对文档所做的操作。</p>
+<p>       组合桶是由为每个文档提取/创建的值的组合构建的，每个组合被视为组合桶。如下为官方给的例子：</p>
 <pre><code class="language-json">{
     &quot;keyword&quot;: [&quot;foo&quot;, &quot;bar&quot;],
     &quot;number&quot;: [23, 65, 76]
 }
 </code></pre>
-<p>如果我们同时对keyword和number两个字段进行聚合会得出以下的结果:</p>
+<p>       如果我们同时对keyword和number两个字段进行聚合会得出以下的结果:</p>
 <pre><code class="language-json">{ &quot;keyword&quot;: &quot;foo&quot;, &quot;number&quot;: 23 }
 { &quot;keyword&quot;: &quot;foo&quot;, &quot;number&quot;: 65 }
 { &quot;keyword&quot;: &quot;foo&quot;, &quot;number&quot;: 76 }
@@ -212,13 +212,13 @@
 { &quot;keyword&quot;: &quot;bar&quot;, &quot;number&quot;: 65 }
 { &quot;keyword&quot;: &quot;bar&quot;, &quot;number&quot;: 76 }
 </code></pre>
-<p>看到上面的例子是不是恍然大悟， 就像类似sql中的多group by 多字段，可以对多个字段进行聚合，这非常适用于对于多维度出报表的需求，我这里建议使用的版本为6.5+，因为6.5版本以下此功能还处于测试阶段，设计和代码没有正式的GA功能成熟，并且没有担保。当然我这里也会提供6.5版本以下如何进行多聚合字段的使用。</p>
-<p>首先上官方文档地址:</p>
+<p>       看到上面的例子是不是恍然大悟， 就像类似sql中的多group by 多字段，可以对多个字段进行聚合，这非常适用于对于多维度出报表的需求，我这里建议使用的版本为6.5+，因为6.5版本以下此功能还处于测试阶段，设计和代码没有正式的GA功能成熟，并且没有担保。当然我这里也会提供6.5版本以下如何进行多聚合字段的使用。</p>
+<p>       首先上官方文档地址:</p>
 <p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/6.5/search-aggregations-bucket-composite-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/6.5/search-aggregations-bucket-composite-aggregation.html</a></p>
-<p>其实官方文档已经把该功能说得很详细，如果你只是单纯写DSL实现的话看官方文档就可以，我接下来就介绍如何调用他的javaAPI来使用，当然如果阅读源码能力强的话也可以直接看官方在github的test,地址如下:</p>
+<p>       其实官方文档已经把该功能说得很详细，如果你只是单纯写DSL实现的话看官方文档就可以，我接下来就介绍如何调用他的javaAPI来使用，当然如果阅读源码能力强的话也可以直接看官方在github的test,地址如下:</p>
 <p><a href="https://github.com/elastic/elasticsearch/tree/master/server/src/test/java/org/elasticsearch/search/aggregations/bucket/composite">https://github.com/elastic/elasticsearch/tree/master/server/src/test/java/org/elasticsearch/search/aggregations/bucket/composite</a></p>
 <h1 id="验证多字段聚合可行性">验证多字段聚合可行性</h1>
-<p>上面的例子为官方例子，我们需要自己弄个例子检查可行性，我们现在创建一个index,索引名为composite_test,mapping如下</p>
+<p>       上面的例子为官方例子，我们需要自己弄个例子检查可行性，我们现在创建一个index,索引名为composite_test,mapping如下</p>
 <pre><code class="language-json">{
         &quot;area&quot; : {
             &quot;type&quot; : &quot;keyword&quot;
@@ -232,15 +232,15 @@
         }
 }
 </code></pre>
-<p>我们创建好了index，index中一共有三个字段，area，userid，sendtime三个字段，我们也使用MySQL数据建一个一模一样的表，方便对比聚合出来的数据是否正确，表名为composite_test。</p>
-<p>我们首先对数据表composite_test插入5条记录，分别如下<br>
+<p>       我们创建好了index，index中一共有三个字段，area，userid，sendtime三个字段，我们也使用MySQL数据建一个一模一样的表，方便对比聚合出来的数据是否正确，表名为composite_test。</p>
+<p>       我们首先对数据表composite_test插入5条记录，分别如下<br>
 <img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfevtc5ta3j20af03yq2z.jpg" alt="WX20200603-101535.png" loading="lazy"></p>
-<p>使用group by对三个字段进行聚合，以下为在数据库中的实现：</p>
+<p>       使用group by对三个字段进行聚合，以下为在数据库中的实现：</p>
 <pre><code class="language-sql">SELECT COUNT(1),area,userid,sendtime FROM composite_test GROUP BY area,userid,sendtime
 </code></pre>
-<p>结果如下:<br>
+<p>       结果如下:<br>
 <img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfevuls6n8j209z02uaa1.jpg" alt="WX20200603-101535.png" loading="lazy"></p>
-<p>以上为数据库的聚合实现，所以我们使用ES进行多字段聚合的时候如果结果和以上的一样则是正确的，我们也一样往ES composite_test索引中 插入相同的5条数据,在kibana上执行以下命令插入。</p>
+<p>       以上为数据库的聚合实现，所以我们使用ES进行多字段聚合的时候如果结果和以上的一样则是正确的，我们也一样往ES composite_test索引中 插入相同的5条数据,在kibana上执行以下命令插入。</p>
 <pre><code class="language-json">POST composite_test/_bulk
 { &quot;index&quot; : {&quot;_type&quot; :&quot;_doc&quot;}}
 {&quot;area&quot;:&quot;33&quot;,&quot;userid&quot;:&quot;400015&quot;,&quot;sendtime&quot;:&quot;2019-01-17 00:00:00&quot;}
@@ -253,9 +253,9 @@
 { &quot;index&quot; : {&quot;_type&quot; : &quot;_doc&quot;}}
 {&quot;area&quot;:&quot;33&quot;,&quot;userid&quot;:&quot;400017&quot;,&quot;sendtime&quot;:&quot;2019-01-17 00:00:00&quot;}
 </code></pre>
-<p>查询ES，我们发现已经存在了这5条数据了。</p>
+<p>       查询ES，我们发现已经存在了这5条数据了。</p>
 <figure data-type="image" tabindex="1"><img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfevvpvlfij20dc03zglo.jpg" alt="WX20200603-101535.png" loading="lazy"></figure>
-<p>接下来我们先使用composite的DSL查询：</p>
+<p>       接下来我们先使用composite的DSL查询：</p>
 <pre><code class="language-json">GET composite_test/_search
 {
     &quot;size&quot;: 0, 
@@ -272,7 +272,7 @@
     }
 }
 </code></pre>
-<p>DSL中参数的意思请自行参考官方文档，都说得很详细的,以上这句理论上是等值于数据库的那句聚合语句的，查询结果如下</p>
+<p>       DSL中参数的意思请自行参考官方文档，都说得很详细的,以上这句理论上是等值于数据库的那句聚合语句的，查询结果如下</p>
 <pre><code class="language-json">[
         {
           &quot;key&quot; : {
@@ -300,16 +300,16 @@
         }
 ]
 </code></pre>
-<p>从以上响应的json数组中我们不难看出，该聚合聚合出来的数据是和数据库聚合出来的数据是一致的，所以 composite是可以使用在多字段聚合上的。论证完可行性，我们接下来使用java来实现，实话说这一块我是看源代码才会使用的，网上资料基本为0，而且官方java使用文档里也没用，的确是与遇到了不少坑，写出来方便以后使用能快速回忆。</p>
+<p>       从以上响应的json数组中我们不难看出，该聚合聚合出来的数据是和数据库聚合出来的数据是一致的，所以 composite是可以使用在多字段聚合上的。论证完可行性，我们接下来使用java来实现，实话说这一块我是看源代码才会使用的，网上资料基本为0，而且官方java使用文档里也没用，的确是与遇到了不少坑，写出来方便以后使用能快速回忆。</p>
 <h1 id="java使用composite聚合">java使用composite聚合</h1>
-<p>首先创建Maven项目,加入ElasticSearch依赖：</p>
+<p>       首先创建Maven项目,加入ElasticSearch依赖：</p>
 <pre><code class="language-xml">&lt;dependency&gt;
     &lt;groupId&gt;org.elasticsearch.client&lt;/groupId&gt;
     &lt;artifactId&gt;elasticsearch-rest-high-level-client&lt;/artifactId&gt;
     &lt;version&gt;6.5.4&lt;/version&gt;
 &lt;/dependency&gt;
 </code></pre>
-<p>直接上实现代码:</p>
+<p>       直接上实现代码:</p>
 <pre><code class="language-java">SearchRequest searchRequest = new SearchRequest(&quot;composite_test&quot;); 
 searchRequest.types(&quot;_doc&quot;);
 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder(); 
@@ -347,15 +347,15 @@ for(ParsedBucket parsedBucket:list){
 }
 /*************************************/
 </code></pre>
-<p>代码中的client为RestHighLevelClient，请自行初始化，然后执行代码，控制台打印如下:</p>
+<p>       代码中的client为RestHighLevelClient，请自行初始化，然后执行代码，控制台打印如下:</p>
 <pre><code class="language-json">{area=35, count=2, sendtime=2019-01-18, userid=400016}
 {area=33, count=2, sendtime=2019-01-17, userid=400015}
 {area=33, count=1, sendtime=2019-01-17, userid=400017}
 </code></pre>
-<p>数据正确，方法可用，其实这个方法是RestHighLevelClient替我们封装了composite生成DSL。</p>
-<p>这里注意一下missingBucket的设置，这个的意思是如果该字段没值，为true的时候会返回null，为false不返回整条数据，注意这里是整条数据，而不是单单这个字段而已。</p>
+<p>       数据正确，方法可用，其实这个方法是RestHighLevelClient替我们封装了composite生成DSL。</p>
+<p>       这里注意一下missingBucket的设置，这个的意思是如果该字段没值，为true的时候会返回null，为false不返回整条数据，注意这里是整条数据，而不是单单这个字段而已。</p>
 <h1 id="低版本使用es多字段聚合">低版本使用ES多字段聚合</h1>
-<p>以上就是composite的验证和在java中的使用方法，建议在6.5+版本使用，但这个时候小伙伴可能会问，如果我是6.5以下的版本呢，这里我也有一个方法，只不过是有点绕，直接上代码：</p>
+<p>       以上就是composite的验证和在java中的使用方法，建议在6.5+版本使用，但这个时候小伙伴可能会问，如果我是6.5以下的版本呢，这里我也有一个方法，只不过是有点绕，直接上代码：</p>
 <pre><code class="language-java">SearchRequest searchRequest = new SearchRequest(&quot;composite_test&quot;); 
 searchRequest.types(&quot;_doc&quot;);
 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder(); 
@@ -377,16 +377,16 @@ Aggregations aggregations = searchResponse.getAggregations();
 aggHandle(aggregations);
 /*************************************/
 </code></pre>
-<p>运行响应的数据为</p>
+<p>       运行响应的数据为</p>
 <pre><code class="language-json">{area=33, count=2, sendtime=2019-01-17, userid=400015}, 
 {area=33, count=1, sendtime=2019-01-17, userid=400017}, 
 {area=35, count=2, sendtime=2019-01-18, userid=400016}
 </code></pre>
-<p>所以使用这个方法也能多值聚合数据，其中实现的关键点在于</p>
+<p>       所以使用这个方法也能多值聚合数据，其中实现的关键点在于</p>
 <pre><code class="language-java">area.subAggregation(userid);
 sendtime.subAggregation(area);
 </code></pre>
-<p>这里相当于把每个桶给串联起来，串联顺序无要求，但用这种方法最后取数据的时候比较麻烦，我这里也分享一个我取数据的方法</p>
+<p>       这里相当于把每个桶给串联起来，串联顺序无要求，但用这种方法最后取数据的时候比较麻烦，我这里也分享一个我取数据的方法</p>
 <pre><code class="language-java">private static List&lt;Map&lt;String,Object&gt;&gt; listmap =new ArrayList&lt;Map&lt;String,Object&gt;&gt;();
 private static Map&lt;String,Object&gt; map =new HashMap&lt;String,Object&gt;(16);
 //使用递归的方式将聚合数据中的数据一一取出来
@@ -527,8 +527,8 @@ private static Map&lt;String,Object&gt; clonMap(Map&lt;String,Object&gt; mapTo){
                                                     <i class="post-share"></i>
                                                     <span>Share:</span>
                                                         <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/"><i class="fa fa-qrcode"></i></a>
-                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/&sharesource=qzone&title=ElasticSearch中composite聚合的使用【转】&pics=https://kychill1986.github.io/images/avatar.png?v=1591152401214&summary="><i class="fa fa-qq"></i></a>
-                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/&sharesource=weibo&title=ElasticSearch中composite聚合的使用【转】 + " - " + &pic="https://kychill1986.github.io/images/avatar.png?v=1591152401214 "><i class="fa fa-weibo "></i></a>
+                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/&sharesource=qzone&title=ElasticSearch中composite聚合的使用【转】&pics=https://kychill1986.github.io/images/avatar.png?v=1591153958244&summary="><i class="fa fa-qq"></i></a>
+                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/elasticsearch-zhong-composite-ju-he-de-shi-yong-zhuan/&sharesource=weibo&title=ElasticSearch中composite聚合的使用【转】 + " - " + &pic="https://kychill1986.github.io/images/avatar.png?v=1591153958244 "><i class="fa fa-weibo "></i></a>
                                                         
                                                                 </span>
                                                                 <!--en-->
@@ -658,7 +658,7 @@ private static Map&lt;String,Object&gt; clonMap(Map&lt;String,Object&gt; mapTo){
                     CheckVersion();
                     
                     var newDate = new Date();
-                    newDate.setTime(1591152401214);
+                    newDate.setTime(1591153958244);
                     console.log(" Blog Update Time: " + newDate.toLocaleDateString());
                     console.log("\n %c \u26a1Theme:Chic Author's Blog:https://blog.itjoker.cn  Write By ITJoker  \n\n", "color: #ffffff; background: rgba(49, 49, 49, 0.85); padding:5px 0;border-radius:5px;");
                 </script>
