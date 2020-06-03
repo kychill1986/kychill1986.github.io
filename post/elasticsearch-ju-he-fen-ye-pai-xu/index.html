@@ -99,7 +99,8 @@
     <div class="container">
       <div class="row">
         <div class="col-lg-8 col-md-10 mx-auto">
-          <p>请求JSON：</p>
+          <h1 id="分页">分页</h1>
+<p>请求JSON：</p>
 <pre><code class="language-json">GET oms_sku_shortage_order_index/_search
 {
     &quot;query&quot;: {
@@ -189,8 +190,8 @@ if (response != null) {
 }
 </code></pre>
 <p>说明：因为bucket_sort是对聚合之后的桶进行分页排序,所以terms里面的size设置要大于bucket_sort里面分页大小，不然会取不到数据</p>
-<hr>
-<p>计算count：</p>
+<h1 id="计算count">计算count</h1>
+<p>请求JSON：</p>
 <pre><code class="language-json">GET oms_sku_shortage_order_index/_search
 {
   &quot;query&quot;: {
