@@ -173,7 +173,7 @@
                     <article class="post-wrap">
                         <header class="post-header">
                             <h1 class="post-title">
-                                虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)
+                                RabbitMQ实现延迟消息【转】
                             </h1>
                             
                                 <!--en-->
@@ -183,20 +183,13 @@
                                         K.Y.Chill's Blog
                                     </a>
                                     <span class="post-time">
-                                Date: <a href="#">2020-05-28</a>
+                                Date: <a href="#">2020-06-09</a>
                             </span>
                                     <span class="post-readtime">Reading Time:<a
-                                    href="#">2.1
+                                    href="#">8.8
                                     mins</a></span>
-                                    <span class="post-words">words:<a href="#">460</a></span>
+                                    <span class="post-words">words:<a href="#">1886</a></span>
                                     
-                                        <span class="post-category">
-                                Category:
-                                
-                                <a href="https://kychill1986.github.io/tag/OAUKSjWmm/">ElasticSearch</a>
-                                
-                            </span>
-                                        
                                             Views:
                                             <span data-hk-page="current"> - </span>
                                             
@@ -205,102 +198,389 @@
                         </header>
                         
                         <div class="post-content">
-                            <p>🖥   ElasticSearch 对外可访问配置</p>
-<!-- more -->
-<h2 id="1关闭防火墙或者加例外">1.关闭防火墙，或者加例外</h2>
-<h3 id="a-查看firewall服务状态">a. 查看firewall服务状态</h3>
-<p><code>systemctl status firewalld</code></p>
-<h3 id="b-查看firewall的状态">b. 查看firewall的状态</h3>
-<p><code>firewall-cmd --state</code></p>
-<h3 id="d-开启-重启-关闭-firewalldservice服务">d. 开启、重启、关闭、firewalld.service服务</h3>
-<pre><code class="language-shell"># 开启
-service firewalld start
-# 重启
-service firewalld restart
-# 关闭
-service firewalld stop
+                            <h1 id="摘要">摘要</h1>
+<hr>
+<p>本文主要讲解mall整合RabbitMQ实现延迟消息的过程，以发送延迟消息取消超时订单为例。RabbitMQ是一个被广泛使用的开源消息队列。它是轻量级且易于部署的，它能支持多种消息协议。RabbitMQ可以部署在分布式和联合配置中，以满足高规模、高可用性的需求。</p>
+<h1 id="项目使用框架介绍">项目使用框架介绍</h1>
+<h2 id="rabbitmq">RabbitMQ</h2>
+<blockquote>
+<p>RabbitMQ是一个被广泛使用的开源消息队列。它是轻量级且易于部署的，它能支持多种消息协议。RabbitMQ可以部署在分布式和联合配置中，以满足高规模、高可用性的需求。</p>
+</blockquote>
+<h1 id="业务场景说明">业务场景说明</h1>
+<blockquote>
+<p>用于解决用户下单以后，订单超时如何取消订单的问题。</p>
+</blockquote>
+<ul>
+<li>用户进行下单操作（会有锁定商品库存、使用优惠券、积分一系列的操作）；</li>
+<li>生成订单，获取订单的id；</li>
+<li>获取到设置的订单超时时间（假设设置的为60分钟不支付取消订单）；</li>
+<li>按订单超时时间发送一个延迟消息给RabbitMQ，让它在订单超时后触发取消订单的操作；</li>
+<li>如果用户没有支付，进行取消订单操作（释放锁定商品库存、返还优惠券、返回积分一系列操作）。</li>
+</ul>
+<h1 id="整合rabbitmq实现延迟消息">整合RabbitMQ实现延迟消息</h1>
+<h2 id="在pomxml中添加相关依赖">在pom.xml中添加相关依赖</h2>
+<pre><code class="language-xml">&lt;!--消息队列相关依赖--&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-amqp&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;!--lombok依赖--&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+    &lt;artifactId&gt;lombok&lt;/artifactId&gt;
+    &lt;optional&gt;true&lt;/optional&gt;
+&lt;/dependency&gt;
 </code></pre>
-<h3 id="e-查看防火墙规则">e. 查看防火墙规则</h3>
-<p><code>firewall-cmd --list-all</code></p>
-<h3 id="f-查询-开放-关闭端口">f. 查询、开放、关闭端口</h3>
-<pre><code class="language-shell"># 查询端口是否开放
-firewall-cmd --query-port=8080/tcp
-# 开放80端口
-firewall-cmd --permanent --add-port=80/tcp
-# 移除端口
-firewall-cmd --permanent --remove-port=8080/tcp
+<h2 id="修改springboot配置文件">修改SpringBoot配置文件</h2>
+<pre><code class="language-yml">rabbitmq:
+    host: localhost # rabbitmq的连接地址
+    port: 5672 # rabbitmq的连接端口号
+    virtual-host: /mall # rabbitmq的虚拟host
+    username: mall # rabbitmq的用户名
+    password: mall # rabbitmq的密码
+    publisher-confirms: true #如果对异步消息需要回调必须设置为true
+</code></pre>
+<h2 id="添加消息队列的枚举配置类queueenum">添加消息队列的枚举配置类QueueEnum</h2>
+<blockquote>
+<p>用于延迟消息队列及处理取消订单消息队列的常量定义，包括交换机名称、队列名称、路由键名称。</p>
+</blockquote>
+<pre><code class="language-java">import lombok.Getter;
 
-#重启防火墙(修改配置后要重启防火墙)
-firewall-cmd --reload
+/**
+ * 消息队列枚举配置
+ * Created by macro on 2018/9/14.
+ */
+@Getter
+public enum QueueEnum {
+    /**
+     * 消息通知队列
+     */
+    QUEUE_ORDER_CANCEL(&quot;mall.order.direct&quot;, &quot;mall.order.cancel&quot;, &quot;mall.order.cancel&quot;),
+    /**
+     * 消息通知ttl队列
+     */
+    QUEUE_TTL_ORDER_CANCEL(&quot;mall.order.direct.ttl&quot;, &quot;mall.order.cancel.ttl&quot;, &quot;mall.order.cancel.ttl&quot;);
 
-# 参数解释
-1、firwall-cmd：是Linux提供的操作firewall的一个工具；
-2、--permanent：表示设置为持久；
-3、--add-port：标识添加的端口；
-</code></pre>
-<h2 id="2-修改elasticsearchyml">2. 修改elasticsearch.yml</h2>
-<pre><code class="language-shell">    network.host: 192.168.33.134 #可以直接写部署ES的IP
-    http.port: 9200
-    
-    node.name: node-1
-    bootstrap.memory_lock: false
-    bootstrap.system_call_filter: false
-    cluster.initial_master_nodes: [&quot;node-1&quot;] #这个“node-1”其实就是上面的“node.name”配置项
-</code></pre>
-<h2 id="3-修改linux系统配置">3. 修改linux系统配置</h2>
-<h3 id="修改sysctlconf">修改sysctl.conf</h3>
-<pre><code class="language-shell">sudo vim /etc/sysctl.conf
-vm.max_map_count=262144
+    /**
+     * 交换名称
+     */
+    private String exchange;
+    /**
+     * 队列名称
+     */
+    private String name;
+    /**
+     * 路由键
+     */
+    private String routeKey;
 
-检查配置是否生效
-sysctl -a | grep “vm.max_map_count”
-显示vm.max_map_count = 262144
+    QueueEnum(String exchange, String name, String routeKey) {
+        this.exchange = exchange;
+        this.name = name;
+        this.routeKey = routeKey;
+    }
+}
 </code></pre>
-<h3 id="编辑etcsecuritylimitsconf">编辑/etc/security/limits.conf</h3>
-<pre><code class="language-shell">* soft nofile 65536
-* hard nofile 65536
-* soft nproc 4096
-* hard nproc 4096
-#以上的配置是针对root用户的
+<h2 id="添加rabbitmq的配置">添加RabbitMQ的配置</h2>
+<blockquote>
+<p>用于配置交换机、队列及队列与交换机的绑定关系。</p>
+</blockquote>
+<pre><code class="language-java">import com.macro.mall.tiny.dto.QueueEnum;
+import org.springframework.amqp.core.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-chill soft nofile 65536
-chill hard nofile 65536
-#以上的配置是针对chill用户的
-</code></pre>
-<p>这样在宿主机输入http://192.168.89.128:9200/，就可以看到es正常启动了</p>
-<pre><code>启动时查看elasticsearch.log日志，如果会看到如下的错误提示，那么按照上面的elasticsearch.yml，就可以解决，如果解决不了，可以针对问题直接baidu
+/**
+ * 消息队列配置
+ * Created by macro on 2018/9/14.
+ */
+@Configuration
+public class RabbitMqConfig {
 
-[3] bootstrap checks failed
-[1]: max file descriptors [4096] for elasticsearch process is too low, increase to at least [65535]
-[2]: max number of threads [3790] for user [chill] is too low, increase to at least [4096]
-[3]: the default discovery settings are unsuitable for production use; at least one of [discovery.seed_hosts, discovery.seed_providers, clus
-ter.initial_master_nodes] must be configured
+    /**
+     * 订单消息实际消费队列所绑定的交换机
+     */
+    @Bean
+    DirectExchange orderDirect() {
+        return (DirectExchange) ExchangeBuilder
+                .directExchange(QueueEnum.QUEUE_ORDER_CANCEL.getExchange())
+                .durable(true)
+                .build();
+    }
+
+    /**
+     * 订单延迟队列队列所绑定的交换机
+     */
+    @Bean
+    DirectExchange orderTtlDirect() {
+        return (DirectExchange) ExchangeBuilder
+                .directExchange(QueueEnum.QUEUE_TTL_ORDER_CANCEL.getExchange())
+                .durable(true)
+                .build();
+    }
+
+    /**
+     * 订单实际消费队列
+     */
+    @Bean
+    public Queue orderQueue() {
+        return new Queue(QueueEnum.QUEUE_ORDER_CANCEL.getName());
+    }
+
+    /**
+     * 订单延迟队列（死信队列）
+     */
+    @Bean
+    public Queue orderTtlQueue() {
+        return QueueBuilder
+                .durable(QueueEnum.QUEUE_TTL_ORDER_CANCEL.getName())
+                .withArgument(&quot;x-dead-letter-exchange&quot;, QueueEnum.QUEUE_ORDER_CANCEL.getExchange())//到期后转发的交换机
+                .withArgument(&quot;x-dead-letter-routing-key&quot;, QueueEnum.QUEUE_ORDER_CANCEL.getRouteKey())//到期后转发的路由键
+                .build();
+    }
+
+    /**
+     * 将订单队列绑定到交换机
+     */
+    @Bean
+    Binding orderBinding(DirectExchange orderDirect,Queue orderQueue){
+        return BindingBuilder
+                .bind(orderQueue)
+                .to(orderDirect)
+                .with(QueueEnum.QUEUE_ORDER_CANCEL.getRouteKey());
+    }
+
+    /**
+     * 将订单延迟队列绑定到交换机
+     */
+    @Bean
+    Binding orderTtlBinding(DirectExchange orderTtlDirect,Queue orderTtlQueue){
+        return BindingBuilder
+                .bind(orderTtlQueue)
+                .to(orderTtlDirect)
+                .with(QueueEnum.QUEUE_TTL_ORDER_CANCEL.getRouteKey());
+    }
+
+}
 </code></pre>
+<h2 id="在rabbitmq管理页面可以看到以下交换机和队列">在RabbitMQ管理页面可以看到以下交换机和队列</h2>
+<p><img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfm3bgiorsj20n004mglh.jpg" alt="undefined" loading="lazy"><br>
+<img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfm3bk8dh8j20m3045q2u.jpg" alt="undefined" loading="lazy"></p>
+<h2 id="交换机及队列说明">交换机及队列说明</h2>
+<ul>
+<li>mall.order.direct（取消订单消息队列所绑定的交换机）:绑定的队列为mall.order.cancel，一旦有消息以mall.order.cancel为路由键发过来，会发送到此队列。</li>
+<li>mall.order.direct.ttl（订单延迟消息队列所绑定的交换机）:绑定的队列为mall.order.cancel.ttl，一旦有消息以mall.order.cancel.ttl为路由键发送过来，会转发到此队列，并在此队列保存一定时间，等到超时后会自动将消息发送到mall.order.cancel（取消订单消息消费队列）。</li>
+</ul>
+<h2 id="添加延迟消息的发送者cancelordersender">添加延迟消息的发送者CancelOrderSender</h2>
+<blockquote>
+<p>用于向订单延迟消息队列（mall.order.cancel.ttl）里发送消息。</p>
+</blockquote>
+<pre><code class="language-java">import com.macro.mall.tiny.dto.QueueEnum;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessagePostProcessor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+/**
+ * 取消订单消息的发出者
+ * Created by macro on 2018/9/14.
+ */
+@Component
+public class CancelOrderSender {
+    private static Logger LOGGER =LoggerFactory.getLogger(CancelOrderSender.class);
+    @Autowired
+    private AmqpTemplate amqpTemplate;
+
+    public void sendMessage(Long orderId,final long delayTimes){
+        //给延迟队列发送消息
+        amqpTemplate.convertAndSend(QueueEnum.QUEUE_TTL_ORDER_CANCEL.getExchange(), QueueEnum.QUEUE_TTL_ORDER_CANCEL.getRouteKey(), orderId, new MessagePostProcessor() {
+            @Override
+            public Message postProcessMessage(Message message) throws AmqpException {
+                //给消息设置延迟毫秒值
+                message.getMessageProperties().setExpiration(String.valueOf(delayTimes));
+                return message;
+            }
+        });
+        LOGGER.info(&quot;send delay message orderId:{}&quot;,orderId);
+    }
+}
+</code></pre>
+<h2 id="添加取消订单消息的接收者cancelorderreceiver">添加取消订单消息的接收者CancelOrderReceiver</h2>
+<blockquote>
+<p>用于从取消订单的消息队列（mall.order.cancel）里接收消息。</p>
+</blockquote>
+<pre><code class="language-java">import com.macro.mall.tiny.service.OmsPortalOrderService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+/**
+ * 取消订单消息的处理者
+ * Created by macro on 2018/9/14.
+ */
+@Component
+@RabbitListener(queues = &quot;mall.order.cancel&quot;)
+public class CancelOrderReceiver {
+    private static Logger LOGGER =LoggerFactory.getLogger(CancelOrderReceiver.class);
+    @Autowired
+    private OmsPortalOrderService portalOrderService;
+    @RabbitHandler
+    public void handle(Long orderId){
+        LOGGER.info(&quot;receive delay message orderId:{}&quot;,orderId);
+        portalOrderService.cancelOrder(orderId);
+    }
+}
+</code></pre>
+<h2 id="添加omsportalorderservice接口">添加OmsPortalOrderService接口</h2>
+<pre><code class="language-java">import com.macro.mall.tiny.common.api.CommonResult;
+import com.macro.mall.tiny.dto.OrderParam;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 前台订单管理Service
+ * Created by macro on 2018/8/30.
+ */
+public interface OmsPortalOrderService {
+
+    /**
+     * 根据提交信息生成订单
+     */
+    @Transactional
+    CommonResult generateOrder(OrderParam orderParam);
+
+    /**
+     * 取消单个超时订单
+     */
+    @Transactional
+    void cancelOrder(Long orderId);
+}
+</code></pre>
+<h2 id="添加omsportalorderservice的实现类omsportalorderserviceimpl">添加OmsPortalOrderService的实现类OmsPortalOrderServiceImpl</h2>
+<pre><code class="language-java">import com.macro.mall.tiny.common.api.CommonResult;
+import com.macro.mall.tiny.component.CancelOrderSender;
+import com.macro.mall.tiny.dto.OrderParam;
+import com.macro.mall.tiny.service.OmsPortalOrderService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/**
+ * 前台订单管理Service
+ * Created by macro on 2018/8/30.
+ */
+@Service
+public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
+    private static Logger LOGGER = LoggerFactory.getLogger(OmsPortalOrderServiceImpl.class);
+    @Autowired
+    private CancelOrderSender cancelOrderSender;
+
+    @Override
+    public CommonResult generateOrder(OrderParam orderParam) {
+        //todo 执行一系类下单操作，具体参考mall项目
+        LOGGER.info(&quot;process generateOrder&quot;);
+        //下单完成后开启一个延迟消息，用于当用户没有付款时取消订单（orderId应该在下单后生成）
+        sendDelayMessageCancelOrder(11L);
+        return CommonResult.success(null, &quot;下单成功&quot;);
+    }
+
+    @Override
+    public void cancelOrder(Long orderId) {
+        //todo 执行一系类取消订单操作，具体参考mall项目
+        LOGGER.info(&quot;process cancelOrder orderId:{}&quot;,orderId);
+    }
+
+    private void sendDelayMessageCancelOrder(Long orderId) {
+        //获取订单超时时间，假设为60分钟
+        long delayTimes = 30 * 1000;
+        //发送延迟消息
+        cancelOrderSender.sendMessage(orderId, delayTimes);
+    }
+
+}
+</code></pre>
+<h2 id="添加omsportalordercontroller定义接口">添加OmsPortalOrderController定义接口</h2>
+<pre><code class="language-java">import com.macro.mall.tiny.dto.OrderParam;
+import com.macro.mall.tiny.service.OmsPortalOrderService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+/**
+ * 订单管理Controller
+ * Created by macro on 2018/8/30.
+ */
+@Controller
+@Api(tags = &quot;OmsPortalOrderController&quot;, description = &quot;订单管理&quot;)
+@RequestMapping(&quot;/order&quot;)
+public class OmsPortalOrderController {
+    @Autowired
+    private OmsPortalOrderService portalOrderService;
+
+    @ApiOperation(&quot;根据购物车信息生成订单&quot;)
+    @RequestMapping(value = &quot;/generateOrder&quot;, method = RequestMethod.POST)
+    @ResponseBody
+    public Object generateOrder(@RequestBody OrderParam orderParam) {
+        return portalOrderService.generateOrder(orderParam);
+    }
+}
+</code></pre>
+<h1 id="进行接口测试">进行接口测试</h1>
+<h2 id="调用下单接口">调用下单接口</h2>
+<p>注意：已经将延迟消息时间设置为30秒</p>
+<p><img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfm3eo7euyj20xs0n5js2.jpg" alt="undefined" loading="lazy"><br>
+<img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfm3erxn4tj20x307nwed.jpg" alt="undefined" loading="lazy"><br>
+<img src="http://ww1.sinaimg.cn/large/5f94f747ly1gfm3ev16aij20ye06cgm1.jpg" alt="undefined" loading="lazy"></p>
+<h1 id="项目源码地址">项目源码地址</h1>
+<p><a href="https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-08">https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-08</a></p>
+<h1 id="引用">引用</h1>
+<p><a href="https://juejin.im/post/5cff98986fb9a07ed36ea139">https://juejin.im/post/5cff98986fb9a07ed36ea139</a></p>
 
                         </div>
                         
                             <div class="post-toc">
                                 <ul class="markdownIt-TOC">
-<li>
+<li><a href="#%E6%91%98%E8%A6%81">摘要</a></li>
+<li><a href="#%E9%A1%B9%E7%9B%AE%E4%BD%BF%E7%94%A8%E6%A1%86%E6%9E%B6%E4%BB%8B%E7%BB%8D">项目使用框架介绍</a>
 <ul>
-<li><a href="#1%E5%85%B3%E9%97%AD%E9%98%B2%E7%81%AB%E5%A2%99%E6%88%96%E8%80%85%E5%8A%A0%E4%BE%8B%E5%A4%96">1.关闭防火墙，或者加例外</a>
-<ul>
-<li><a href="#a-%E6%9F%A5%E7%9C%8Bfirewall%E6%9C%8D%E5%8A%A1%E7%8A%B6%E6%80%81">a. 查看firewall服务状态</a></li>
-<li><a href="#b-%E6%9F%A5%E7%9C%8Bfirewall%E7%9A%84%E7%8A%B6%E6%80%81">b. 查看firewall的状态</a></li>
-<li><a href="#d-%E5%BC%80%E5%90%AF-%E9%87%8D%E5%90%AF-%E5%85%B3%E9%97%AD-firewalldservice%E6%9C%8D%E5%8A%A1">d. 开启、重启、关闭、firewalld.service服务</a></li>
-<li><a href="#e-%E6%9F%A5%E7%9C%8B%E9%98%B2%E7%81%AB%E5%A2%99%E8%A7%84%E5%88%99">e. 查看防火墙规则</a></li>
-<li><a href="#f-%E6%9F%A5%E8%AF%A2-%E5%BC%80%E6%94%BE-%E5%85%B3%E9%97%AD%E7%AB%AF%E5%8F%A3">f. 查询、开放、关闭端口</a></li>
+<li><a href="#rabbitmq">RabbitMQ</a></li>
 </ul>
 </li>
-<li><a href="#2-%E4%BF%AE%E6%94%B9elasticsearchyml">2. 修改elasticsearch.yml</a></li>
-<li><a href="#3-%E4%BF%AE%E6%94%B9linux%E7%B3%BB%E7%BB%9F%E9%85%8D%E7%BD%AE">3. 修改linux系统配置</a>
+<li><a href="#%E4%B8%9A%E5%8A%A1%E5%9C%BA%E6%99%AF%E8%AF%B4%E6%98%8E">业务场景说明</a></li>
+<li><a href="#%E6%95%B4%E5%90%88rabbitmq%E5%AE%9E%E7%8E%B0%E5%BB%B6%E8%BF%9F%E6%B6%88%E6%81%AF">整合RabbitMQ实现延迟消息</a>
 <ul>
-<li><a href="#%E4%BF%AE%E6%94%B9sysctlconf">修改sysctl.conf</a></li>
-<li><a href="#%E7%BC%96%E8%BE%91etcsecuritylimitsconf">编辑/etc/security/limits.conf</a></li>
+<li><a href="#%E5%9C%A8pomxml%E4%B8%AD%E6%B7%BB%E5%8A%A0%E7%9B%B8%E5%85%B3%E4%BE%9D%E8%B5%96">在pom.xml中添加相关依赖</a></li>
+<li><a href="#%E4%BF%AE%E6%94%B9springboot%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6">修改SpringBoot配置文件</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E7%9A%84%E6%9E%9A%E4%B8%BE%E9%85%8D%E7%BD%AE%E7%B1%BBqueueenum">添加消息队列的枚举配置类QueueEnum</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0rabbitmq%E7%9A%84%E9%85%8D%E7%BD%AE">添加RabbitMQ的配置</a></li>
+<li><a href="#%E5%9C%A8rabbitmq%E7%AE%A1%E7%90%86%E9%A1%B5%E9%9D%A2%E5%8F%AF%E4%BB%A5%E7%9C%8B%E5%88%B0%E4%BB%A5%E4%B8%8B%E4%BA%A4%E6%8D%A2%E6%9C%BA%E5%92%8C%E9%98%9F%E5%88%97">在RabbitMQ管理页面可以看到以下交换机和队列</a></li>
+<li><a href="#%E4%BA%A4%E6%8D%A2%E6%9C%BA%E5%8F%8A%E9%98%9F%E5%88%97%E8%AF%B4%E6%98%8E">交换机及队列说明</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0%E5%BB%B6%E8%BF%9F%E6%B6%88%E6%81%AF%E7%9A%84%E5%8F%91%E9%80%81%E8%80%85cancelordersender">添加延迟消息的发送者CancelOrderSender</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0%E5%8F%96%E6%B6%88%E8%AE%A2%E5%8D%95%E6%B6%88%E6%81%AF%E7%9A%84%E6%8E%A5%E6%94%B6%E8%80%85cancelorderreceiver">添加取消订单消息的接收者CancelOrderReceiver</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0omsportalorderservice%E6%8E%A5%E5%8F%A3">添加OmsPortalOrderService接口</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0omsportalorderservice%E7%9A%84%E5%AE%9E%E7%8E%B0%E7%B1%BBomsportalorderserviceimpl">添加OmsPortalOrderService的实现类OmsPortalOrderServiceImpl</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0omsportalordercontroller%E5%AE%9A%E4%B9%89%E6%8E%A5%E5%8F%A3">添加OmsPortalOrderController定义接口</a></li>
 </ul>
 </li>
+<li><a href="#%E8%BF%9B%E8%A1%8C%E6%8E%A5%E5%8F%A3%E6%B5%8B%E8%AF%95">进行接口测试</a>
+<ul>
+<li><a href="#%E8%B0%83%E7%94%A8%E4%B8%8B%E5%8D%95%E6%8E%A5%E5%8F%A3">调用下单接口</a></li>
 </ul>
 </li>
+<li><a href="#%E9%A1%B9%E7%9B%AE%E6%BA%90%E7%A0%81%E5%9C%B0%E5%9D%80">项目源码地址</a></li>
+<li><a href="#%E5%BC%95%E7%94%A8">引用</a></li>
 </ul>
 
                             </div>
@@ -316,7 +596,7 @@ ter.initial_master_nodes] must be configured
 
                                             <p class="copyright-item">
                                                 <span>Permalink:</span>
-                                                <span><a href="https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/">https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/</a></span>
+                                                <span><a href="https://kychill1986.github.io/post/rabbitmq-shi-xian-yan-chi-xiao-xi-zhuan/">https://kychill1986.github.io/post/rabbitmq-shi-xian-yan-chi-xiao-xi-zhuan/</a></span>
                                             </p>
 
                                             <p class="copyright-item">
@@ -331,11 +611,9 @@ ter.initial_master_nodes] must be configured
                                                         <span style="margin-right:15px">
                                                     <i class="post-share"></i>
                                                     <span>Share:</span>
-                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/"><i class="fa fa-qrcode"></i></a>
-                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/&sharesource=qzone&title=虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)&pics=https://kychill1986.github.io/images/avatar.png?v=1591689663481&summary=&lt;p&gt;🖥   ElasticSearch 对外可访问配置&lt;/p&gt;
-"><i class="fa fa-qq"></i></a>
-                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/&sharesource=weibo&title=虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS) + " - " + &lt;p&gt;🖥   ElasticSearch 对外可访问配置&lt;/p&gt;
-&pic="https://kychill1986.github.io/images/avatar.png?v=1591689663481 "><i class="fa fa-weibo "></i></a>
+                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://kychill1986.github.io/post/rabbitmq-shi-xian-yan-chi-xiao-xi-zhuan/"><i class="fa fa-qrcode"></i></a>
+                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/rabbitmq-shi-xian-yan-chi-xiao-xi-zhuan/&sharesource=qzone&title=RabbitMQ实现延迟消息【转】&pics=https://kychill1986.github.io/images/avatar.png?v=1591689663481&summary="><i class="fa fa-qq"></i></a>
+                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/rabbitmq-shi-xian-yan-chi-xiao-xi-zhuan/&sharesource=weibo&title=RabbitMQ实现延迟消息【转】 + " - " + &pic="https://kychill1986.github.io/images/avatar.png?v=1591689663481 "><i class="fa fa-weibo "></i></a>
                                                         
                                                             <div class="reward ">
                                                                 <div class="reward-button ">&yen;
@@ -352,12 +630,6 @@ ter.initial_master_nodes] must be configured
                                                                         <span>Tag(s):</span>
                                                                         <span class="tag ">
                         
-                        
-                        <a href="https://kychill1986.github.io/tag/OAUKSjWmm/">#
-                                                ElasticSearch
-                                                    </a>
-                                                    
-                                                        
                                                             </span>
                                                                     </div>
                                                                     <div>
@@ -370,13 +642,9 @@ ter.initial_master_nodes] must be configured
                                                                                 <!---->
                                                                                 <section class="post-nav">
                                                                                     
-                                                                                        <a class="prev" rel="prev" href="https://kychill1986.github.io/post/elasticsearch-ju-he-fen-ye-pai-xu/">
-                                                                                            Elasticsearch 聚合分页排序
-                                                                                        </a>
-                                                                                        
                                                                                             
-                                                                                                <a class="next" rel="next" href="https://kychill1986.github.io/post/mac-xi-tong-an-zhuang-elasticsearch/">
-                                                                                                    Mac 系统安装ElasticSearch
+                                                                                                <a class="next" rel="next" href="https://kychill1986.github.io/post/rabbitmq-ji-ben-shi-yong-zhuan/">
+                                                                                                    RabbitMQ基本使用【转】
                                                                                                 </a>
                                                                                                 
                                                                                 </section>
