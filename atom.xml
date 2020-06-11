@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://kychill1986.github.io</id>
     <title>K.Y.Chill&apos;s Blog</title>
-    <updated>2020-06-09T08:04:24.522Z</updated>
+    <updated>2020-06-11T02:59:54.715Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://kychill1986.github.io"/>
     <link rel="self" href="https://kychill1986.github.io/atom.xml"/>
@@ -10,6 +10,13 @@
     <logo>https://kychill1986.github.io/images/avatar.png</logo>
     <icon>https://kychill1986.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, K.Y.Chill&apos;s Blog</rights>
+    <entry>
+        <title type="html"><![CDATA[Kafka 为什么速度那么快？【转】]]></title>
+        <id>https://kychill1986.github.io/post/kafka-wei-shi-me-su-du-na-me-kuai-zhuan/</id>
+        <link href="https://kychill1986.github.io/post/kafka-wei-shi-me-su-du-na-me-kuai-zhuan/">
+        </link>
+        <updated>2020-06-11T02:48:10.000Z</updated>
+    </entry>
     <entry>
         <title type="html"><![CDATA[RabbitMQ实现延迟消息【转】]]></title>
         <id>https://kychill1986.github.io/post/rabbitmq-shi-xian-yan-chi-xiao-xi-zhuan/</id>
