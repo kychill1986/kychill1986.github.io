@@ -173,7 +173,7 @@
                     <article class="post-wrap">
                         <header class="post-header">
                             <h1 class="post-title">
-                                Mac 系统安装ElasticSearch
+                                MyBatis 批量 upsert
                             </h1>
                             
                                 <!--en-->
@@ -183,17 +183,19 @@
                                         K.Y.Chill's Blog
                                     </a>
                                     <span class="post-time">
-                                Date: <a href="#">2020-03-11</a>
+                                Date: <a href="#">2020-06-18</a>
                             </span>
                                     <span class="post-readtime">Reading Time:<a
-                                    href="#">3.1
+                                    href="#">1.3
                                     mins</a></span>
-                                    <span class="post-words">words:<a href="#">612</a></span>
+                                    <span class="post-words">words:<a href="#">246</a></span>
                                     
                                         <span class="post-category">
                                 Category:
                                 
-                                <a href="https://kychill1986.github.io/tag/OAUKSjWmm/">ElasticSearch</a>
+                                <a href="https://kychill1986.github.io/tag/hdeiMWPNo/">MyBatis</a>
+                                
+                                <a href="https://kychill1986.github.io/tag/z26SMVX5G/">java</a>
                                 
                             </span>
                                         
@@ -205,118 +207,63 @@
                         </header>
                         
                         <div class="post-content">
-                            <p>🖥  包含单机安装，以及集群配置介绍...</p>
-<!-- more -->
-<h2 id="单机安装">单机安装</h2>
-<ol>
-<li>下载elasticSearch http://elastic.co</li>
-<li>解压elasticSearch...tar.gz</li>
-<li>启动elasticSearch<br>
-<code>./bin/elasticsearch -d #后台运行</code></li>
-</ol>
-<h2 id="安装elasticsearch-head插件">安装elasticSearch-head插件</h2>
-<ol>
-<li>下载elasticSearch-head，访问gitHub，搜索elasticSearch-head，在搜索结果里点击“mobz/elasticsearch-head”</li>
-<li>解压elasticSearch-head</li>
-<li>cd '/Users/xxx/Documents/Tools/ElasticSearch/elasticsearch-head-master/'</li>
-<li>安装最新版node <code>brew install node</code></li>
-<li>安装grunt <code>npm install -g grunt-cli</code></li>
-<li>在elasticsearch-head-master目录执行 npm install</li>
-</ol>
-<pre><code>如果安装过程中出现：
-1. Failed at the phantomjs-prebuilt@2.1.15 install script ‘node install.js’.
-解决方法：
-npm install phantomjs-prebuilt@2.1.15 --ignore-scripts
-2. Local Npm module &quot;grunt-contrib-jasmine&quot; not found. Is it installed
-解决办法：
-npm install grunt-contrib-jasmine --registry=https://registry.npm.taobao.org #使用国内镜像
+                            <p>下语句实现MySQL批量插入更新功能。插入数据，如果数据库中主键已存在则更新on duplicate key update后的字段，主键不变。</p>
+<pre><code class="language-xml">
+    &lt;insert id=&quot;saveOrUpdate&quot; parameterType=&quot;java.util.List&quot;&gt;
+        insert into order_audit_stat
+        &lt;trim prefix=&quot;(&quot; suffix=&quot;)&quot; &gt;
+            day
+            ,shop_code
+            ,source_trade_order_num
+            ,sys_trade_order_num
+            ,today_manual_audit_order_num
+            ,today_auto_audit_order_num
+            ,today_audit_order_total_num
+            ,goods_manual_audit_num
+            ,goods_manual_audit_split_num
+            ,goods_sys_audit_num
+            ,goods_sys_audit_split_num
+            ,create_time
+            ,update_time
+        &lt;/trim&gt;
+        values
+        &lt;foreach  collection=&quot;list&quot; item=&quot;item&quot; index=&quot;index&quot; separator=&quot;,&quot;&gt;
+            &lt;trim prefix=&quot; (&quot; suffix=&quot;)&quot; suffixOverrides=&quot;,&quot; &gt;
+                #{item.day}
+                ,#{item.shopCode}
+                ,#{item.sourceTradeOrderNum}
+                ,#{item.sysTradeOrderNum}
+                ,#{item.todayManualAuditOrderNum}
+                ,#{item.todayAutoAuditOrderNum}
+                ,#{item.todayAuditOrderTotalNum}
+                ,#{item.goodsManualAuditNum}
+                ,#{item.goodsManualAuditSplitNum}
+                ,#{item.goodsSysAuditNum}
+                ,#{item.goodsSysAuditSplitNum}
+                ,#{item.createTime}
+                ,#{item.updateTime}
+            &lt;/trim&gt;
+        &lt;/foreach&gt;
+        on duplicate key update
+            source_trade_order_num = VALUES(source_trade_order_num)
+            ,sys_trade_order_num = VALUES(sys_trade_order_num)
+            ,today_manual_audit_order_num = VALUES(today_manual_audit_order_num)
+            ,today_auto_audit_order_num = VALUES(today_auto_audit_order_num)
+            ,today_audit_order_total_num = VALUES(today_audit_order_total_num)
+            ,goods_manual_audit_num = VALUES(goods_manual_audit_num)
+            ,goods_manual_audit_split_num = VALUES(goods_manual_audit_split_num)
+            ,goods_sys_audit_num = VALUES(goods_sys_audit_num)
+            ,goods_sys_audit_split_num = VALUES(goods_sys_audit_split_num)
+            ,update_time = VALUES(update_time)
+    &lt;/insert&gt;
 </code></pre>
-<ol start="7">
-<li>启动elasticSearch-head</li>
-</ol>
-<pre><code>npm run start
-</code></pre>
-<ol start="8">
-<li>测试：http://serverip:9100/</li>
-</ol>
-<h2 id="配置elasticsearch">配置elasticsearch</h2>
-<p>使elasticSearch-head能正常访问（这两个是独立的进程，有跨域问题），修改elasticsearch，config/elasticsearch.yml文件，加入如下代码：</p>
-<pre><code class="language-yml">http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
-</code></pre>
-<p>重新启动elasticsearch，访问elasticSearch-head，http://serverip:9100/</p>
-<h2 id="elasticsearch集群配置">ElasticSearch集群配置</h2>
-<h3 id="修改configelasticsearchyml文件">修改config/elasticsearch.yml文件</h3>
-<p>master:</p>
-<pre><code class="language-yml">http.cors.enabled: true
-http.cors.allow-origin: &quot;*&quot;
-
-cluster.name: chillcluster
-node.name: chillmaster
-node.master: true
-</code></pre>
-<p>slave1:</p>
-<pre><code class="language-yml">cluster.name: chillcluster
-node.name: slave1
-
-network.host: 127.0.0.1
-http.port: 9201
-
-discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;] #找到master，如果不做这个配置那么这个节点就是游离于集群之外的
-
-</code></pre>
-<p>slave2:</p>
-<pre><code class="language-yml">cluster.name: chillcluster
-node.name: slave2
-
-network.host: 127.0.0.1
-
-http.port: 9202
-
-discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;] #找到master，如果不做这个配置那么这个节点就是游离于集群之外的
-</code></pre>
-<hr>
-<!-- more -->
-<p>#彩蛋🎆<br>
-官方下载下来的elasticsearch安装包，直接解压，运行以前命令，也可以实现同样的集群效果</p>
-<pre><code class="language-shell">复杂的：
-./elasticsearch -E node.name=chillmaster -E cluster.name=chillcluster -E node.master=true -E http.cors.enabled=true -E http.cors.allow-origin=&quot;*&quot; -E path.data=node1_data -d
-./elasticsearch -E node.name=slave1 -E cluster.name=chillcluster -E network.host=127.0.0.1 -E http.port=9201 -E discovery.zen.ping.unicast.hosts=&quot;127.0.0.1&quot; -E path.data=node2_data -d
-./elasticsearch -E node.name=slave2 -E cluster.name=chillcluster -E network.host=127.0.0.1 -E http.port=9202 -E discovery.zen.ping.unicast.hosts=&quot;127.0.0.1&quot; -E path.data=node3_data -d
-
-
-简单的：
-./elasticsearch -E node.name=node1 -E cluster.name=chillcluster -E path.data=node1_data -d
-./elasticsearch -E node.name=node2 -E cluster.name=chillcluster -E path.data=node2_data -d
-./elasticsearch -E node.name=node3 -E cluster.name=chillcluster -E path.data=node3_data -d
-
-最后用http://127.0.0.1:9200/_cat/nodes，检查下是否正常
-</code></pre>
-<h2 id="reference">Reference</h2>
-<blockquote>
-<p>https://blog.csdn.net/fenglailea/article/details/52934263<br>
-http://www.bubuko.com/infodetail-2108888.html</p>
-</blockquote>
+<p>on duplicate key update后面执行的更新语句用VALUES取值，因为这些字段在执行插入时已用#{}赋过值。<br>
+另外replace into 也可实现更新已存在的记录，但是表中定义的主键会变化。</p>
 
                         </div>
                         
                             <div class="post-toc">
-                                <ul class="markdownIt-TOC">
-<li>
-<ul>
-<li><a href="#%E5%8D%95%E6%9C%BA%E5%AE%89%E8%A3%85">单机安装</a></li>
-<li><a href="#%E5%AE%89%E8%A3%85elasticsearch-head%E6%8F%92%E4%BB%B6">安装elasticSearch-head插件</a></li>
-<li><a href="#%E9%85%8D%E7%BD%AEelasticsearch">配置elasticsearch</a></li>
-<li><a href="#elasticsearch%E9%9B%86%E7%BE%A4%E9%85%8D%E7%BD%AE">ElasticSearch集群配置</a>
-<ul>
-<li><a href="#%E4%BF%AE%E6%94%B9configelasticsearchyml%E6%96%87%E4%BB%B6">修改config/elasticsearch.yml文件</a></li>
-</ul>
-</li>
-<li><a href="#reference">Reference</a></li>
-</ul>
-</li>
-</ul>
-
+                                
                             </div>
                             
                                 
@@ -330,7 +277,7 @@ http://www.bubuko.com/infodetail-2108888.html</p>
 
                                             <p class="copyright-item">
                                                 <span>Permalink:</span>
-                                                <span><a href="https://kychill1986.github.io/post/mac-xi-tong-an-zhuang-elasticsearch/">https://kychill1986.github.io/post/mac-xi-tong-an-zhuang-elasticsearch/</a></span>
+                                                <span><a href="https://kychill1986.github.io/post/mybatis-pi-liang-upsert/">https://kychill1986.github.io/post/mybatis-pi-liang-upsert/</a></span>
                                             </p>
 
                                             <p class="copyright-item">
@@ -345,11 +292,9 @@ http://www.bubuko.com/infodetail-2108888.html</p>
                                                         <span style="margin-right:15px">
                                                     <i class="post-share"></i>
                                                     <span>Share:</span>
-                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://kychill1986.github.io/post/mac-xi-tong-an-zhuang-elasticsearch/"><i class="fa fa-qrcode"></i></a>
-                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/mac-xi-tong-an-zhuang-elasticsearch/&sharesource=qzone&title=Mac 系统安装ElasticSearch&pics=https://kychill1986.github.io/images/avatar.png?v=1592452437730&summary=&lt;p&gt;🖥  包含单机安装，以及集群配置介绍...&lt;/p&gt;
-"><i class="fa fa-qq"></i></a>
-                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/mac-xi-tong-an-zhuang-elasticsearch/&sharesource=weibo&title=Mac 系统安装ElasticSearch + " - " + &lt;p&gt;🖥  包含单机安装，以及集群配置介绍...&lt;/p&gt;
-&pic="https://kychill1986.github.io/images/avatar.png?v=1592452437730 "><i class="fa fa-weibo "></i></a>
+                                                        <a title="QR Code" target="_blank" href="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://kychill1986.github.io/post/mybatis-pi-liang-upsert/"><i class="fa fa-qrcode"></i></a>
+                                                        <a title="QQ" target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https://kychill1986.github.io/post/mybatis-pi-liang-upsert/&sharesource=qzone&title=MyBatis 批量 upsert&pics=https://kychill1986.github.io/images/avatar.png?v=1592452437730&summary="><i class="fa fa-qq"></i></a>
+                                                        <a title="Weibo" target="_blank" href="https://service.weibo.com/share/share.php?url=https://kychill1986.github.io/post/mybatis-pi-liang-upsert/&sharesource=weibo&title=MyBatis 批量 upsert + " - " + &pic="https://kychill1986.github.io/images/avatar.png?v=1592452437730 "><i class="fa fa-weibo "></i></a>
                                                         
                                                             <div class="reward ">
                                                                 <div class="reward-button ">&yen;
@@ -367,8 +312,12 @@ http://www.bubuko.com/infodetail-2108888.html</p>
                                                                         <span class="tag ">
                         
                         
-                        <a href="https://kychill1986.github.io/tag/OAUKSjWmm/">#
-                                                ElasticSearch
+                        <a href="https://kychill1986.github.io/tag/hdeiMWPNo/">#
+                                                MyBatis
+                                                    </a>
+                                                    
+                        <a href="https://kychill1986.github.io/tag/z26SMVX5G/">#
+                                                java
                                                     </a>
                                                     
                                                         
@@ -384,11 +333,11 @@ http://www.bubuko.com/infodetail-2108888.html</p>
                                                                                 <!---->
                                                                                 <section class="post-nav">
                                                                                     
-                                                                                        <a class="prev" rel="prev" href="https://kychill1986.github.io/post/xu-ni-ji-nei-de-elasticsearch-760ke-yi-zai-su-zhu-ji-yong-ip-jin-xing-fang-wen-centos/">
-                                                                                            虚拟机内的ElasticSearch 7.6.0，可以在宿主机用IP进行访问(CentOS)
-                                                                                        </a>
-                                                                                        
                                                                                             
+                                                                                                <a class="next" rel="next" href="https://kychill1986.github.io/post/kafka-wei-shi-me-su-du-na-me-kuai-zhuan/">
+                                                                                                    Kafka 为什么速度那么快？【转】
+                                                                                                </a>
+                                                                                                
                                                                                 </section>
                     </article>
                 </div>
